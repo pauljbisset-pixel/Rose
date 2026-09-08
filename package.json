@@ -1,0 +1,9 @@
+{
+  "name": "rose-budge-shop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Rose Budge — shop site, enquiry flow, and studio dashboard",
+  "engines": {
+    "node": ">=18"
+  }
+}

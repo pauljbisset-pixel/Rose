@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rose Budge — Artist, Instow, North Devon</title>
+<meta name="description" content="Rose Budge is an artist based in Instow, North Devon. Vivid oil paintings, layered with wax and seaweed gathered from the Devon coast.">
+<meta property="og:title" content="Rose Budge — Artist, Instow">
+<meta property="og:description" content="Vivid oil paintings, layered with wax and seaweed gathered from the Devon coast.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="images/hero.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+<style>
+  :root{
+    --shell:#FAF7F2;
+    --shell-2:#F2ECE2;
+    --sand:#E3D8C7;
+    --ink:#15303C;
+    --ink-soft:#2A4A57;
+    --sea:#2E7285;
+    --muted:#71818A;
+    --line:rgba(21,48,60,.14);
+    --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+    --body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --pad:clamp(1.25rem,5vw,5rem);
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--shell);color:var(--ink);
+    font-family:var(--body);font-weight:300;font-size:17px;line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%;display:block}
+  a{color:inherit}
+
+  /* ---------- nav ---------- */
+  header.nav{
+    position:fixed;top:0;left:0;right:0;z-index:60;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1.1rem var(--pad);
+    transition:background .4s ease,box-shadow .4s ease,padding .4s ease;
+    color:#fff;mix-blend-mode:normal;
+  }
+  header.nav.solid{
+    background:rgba(250,247,242,.92);backdrop-filter:blur(10px);
+    color:var(--ink);box-shadow:0 1px 0 var(--line);padding:.75rem var(--pad);
+  }
+  .nav .mark{font-family:var(--display);font-size:1.35rem;letter-spacing:.06em;text-transform:uppercase;text-decoration:none}
+  .nav nav{display:flex;gap:1.75rem}
+  .nav nav a{
+    text-decoration:none;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;
+    opacity:.85;transition:opacity .25s;
+  }
+  .nav nav a:hover{opacity:1}
+  @media(max-width:620px){ .nav nav{gap:1.1rem} .nav nav a{font-size:.66rem;letter-spacing:.12em} .nav .mark{font-size:1.1rem} }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;min-height:100svh;display:flex;align-items:flex-end;
+    overflow:hidden;background:var(--ink);
+  }
+  .hero img.bg{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+    transform:scale(1.04);animation:driftIn 14s ease-out forwards;
+  }
+  @keyframes driftIn{from{transform:scale(1.12)}to{transform:scale(1.0)}}
+  .hero::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(to top,rgba(10,26,33,.82) 0%,rgba(10,26,33,.35) 42%,rgba(10,26,33,.18) 100%);
+  }
+  .hero .inner{position:relative;z-index:2;padding:0 var(--pad) clamp(3rem,8vh,6rem);color:#fff;max-width:var(--maxw);width:100%;margin:0 auto}
+  .hero .eyebrow{
+    font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;opacity:.8;margin:0 0 1rem;
+  }
+  .hero h1{
+    font-family:var(--display);font-weight:300;
+    font-size:clamp(3rem,10vw,7rem);line-height:.95;margin:0 0 1rem;letter-spacing:-.01em;
+  }
+  .hero p.lede{
+    font-family:var(--display);font-style:italic;font-size:clamp(1.15rem,2.4vw,1.7rem);
+    line-height:1.45;max-width:34ch;margin:0;opacity:.95;font-weight:300;
+  }
+  .scrollcue{
+    position:absolute;bottom:1.6rem;right:var(--pad);z-index:3;color:#fff;opacity:.7;
+    font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;display:flex;align-items:center;gap:.6rem;
+  }
+  .scrollcue span.line{display:block;width:44px;height:1px;background:currentColor;transform-origin:left;animation:pull 2.4s ease-in-out infinite}
+  @keyframes pull{0%,100%{transform:scaleX(.4)}50%{transform:scaleX(1)}}
+  @media(max-width:620px){.scrollcue{display:none}}
+
+  /* ---------- shared ---------- */
+  .wrap{max-width:var(--maxw);margin:0 auto;padding-left:var(--pad);padding-right:var(--pad)}
+  section{padding:clamp(4.5rem,11vw,8.5rem) 0}
+  .kicker{
+    font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:var(--sea);margin:0 0 1.4rem;
+  }
+  h2{font-family:var(--display);font-weight:300;font-size:clamp(2rem,4.6vw,3.2rem);line-height:1.12;margin:0 0 1.5rem;letter-spacing:-.01em}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.2,.7,.3,1),transform .9s cubic-bezier(.2,.7,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- about ---------- */
+  .about{background:var(--shell-2)}
+  .about .grid{display:grid;grid-template-columns:1fr 1.15fr;gap:clamp(2rem,6vw,5rem);align-items:center}
+  @media(max-width:860px){.about .grid{grid-template-columns:1fr}}
+  .about figure{margin:0;position:relative}
+  .about figure img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:2px}
+  .about figure .portrait{
+    position:absolute;left:-26px;bottom:-26px;z-index:2;
+    width:clamp(110px,26%,152px);height:auto;aspect-ratio:1/1;object-fit:cover;
+    border-radius:50%;border:6px solid var(--shell-2);
+    box-shadow:0 8px 24px rgba(21,48,60,.18);
+  }
+  @media(max-width:860px){
+    .about figure .portrait{left:auto;right:-14px;bottom:-22px;width:clamp(96px,24%,128px)}
+  }
+  .about figure::before{
+    content:"";position:absolute;inset:auto -14px -14px auto;width:62%;height:62%;
+    border:1px solid var(--sand);border-left:0;border-top:0;z-index:-1;
+  }
+  .about p{margin:0 0 1.25rem;color:var(--ink-soft);max-width:56ch}
+  .about p.first::first-letter{
+    font-family:var(--display);font-size:3.4em;line-height:.82;float:left;
+    padding:.06em .12em 0 0;color:var(--sea);font-weight:400;
+  }
+
+  /* ---------- quote strip ---------- */
+  .quote{background:var(--ink);color:var(--shell);text-align:center}
+  .quote blockquote{
+    margin:0 auto;max-width:24ch;font-family:var(--display);font-style:italic;font-weight:300;
+    font-size:clamp(1.6rem,4.4vw,3rem);line-height:1.3;
+  }
+  .quote .attrib{margin-top:1.8rem;font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;opacity:.6}
+
+  /* ---------- gallery ---------- */
+  .gallery .head{display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;flex-wrap:wrap;margin-bottom:clamp(2rem,5vw,3.5rem)}
+  .gallery .head p{margin:0;color:var(--muted);max-width:42ch}
+  /* masonry via CSS columns — keeps every painting at its true proportions */
+  .grid-art{
+    column-count:3;column-gap:clamp(.9rem,2vw,1.5rem);
+  }
+  @media(max-width:900px){.grid-art{column-count:2}}
+  @media(max-width:540px){.grid-art{column-count:1}}
+  .card{
+    position:relative;margin:0 0 clamp(.9rem,2vw,1.5rem);cursor:zoom-in;
+    background:var(--sand);overflow:hidden;border-radius:2px;
+    break-inside:avoid;-webkit-column-break-inside:avoid;display:block;
+    box-shadow:0 1px 2px rgba(21,48,60,.08);
+  }
+  .card img{
+    width:100%;height:auto;
+    transition:transform .8s cubic-bezier(.2,.7,.3,1),filter .5s;
+  }
+  .card:hover img{transform:scale(1.05)}
+  .card figcaption{
+    position:absolute;inset:auto 0 0 0;padding:1.6rem 1.1rem .9rem;
+    background:linear-gradient(to top,rgba(10,26,33,.8),rgba(10,26,33,0));
+    color:#fff;font-size:.82rem;letter-spacing:.04em;
+    opacity:0;transform:translateY(8px);transition:all .45s ease;
+  }
+  .card:hover figcaption,.card:focus-visible figcaption{opacity:1;transform:none}
+  .card figcaption em{display:block;font-style:normal;opacity:.7;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;margin-top:.25rem}
+
+  /* ---------- lightbox ---------- */
+  .lb{
+    position:fixed;inset:0;z-index:100;display:none;place-items:center;
+    background:rgba(10,26,33,.94);backdrop-filter:blur(6px);padding:clamp(1rem,4vw,3rem);
+  }
+  .lb.open{display:grid}
+  .lb img{max-width:min(94vw,1100px);max-height:80svh;object-fit:contain;border-radius:2px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .lb .cap{color:#fff;text-align:center;margin-top:1.1rem;font-size:.86rem;opacity:.85}
+  .lb .cap em{display:block;font-style:normal;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;opacity:.6;margin-top:.3rem}
+  .lb button{
+    position:absolute;background:none;border:0;color:#fff;cursor:pointer;opacity:.7;
+    font-size:2rem;line-height:1;padding:.6rem;transition:opacity .2s;font-family:var(--body);font-weight:300;
+  }
+  .lb button:hover{opacity:1}
+  .lb .close{top:1rem;right:1.2rem;font-size:1.8rem}
+  .lb .prev{left:.6rem;top:50%;transform:translateY(-50%)}
+  .lb .next{right:.6rem;top:50%;transform:translateY(-50%)}
+
+  /* ---------- contact ---------- */
+  .contact{background:var(--shell-2);text-align:center}
+  .contact h2{margin-bottom:1rem}
+  .contact p{color:var(--ink-soft);max-width:46ch;margin:0 auto 2.4rem}
+  .btn{
+    display:inline-block;text-decoration:none;background:var(--ink);color:var(--shell);
+    padding:1rem 2.4rem;font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;
+    border-radius:999px;transition:background .3s,transform .3s;
+  }
+  .btn:hover{background:var(--sea);transform:translateY(-2px)}
+  .phone{margin:1.6rem 0 0;font-size:.95rem;color:var(--muted)}
+  .phone a{
+    color:var(--ink-soft);text-decoration:none;letter-spacing:.06em;
+    border-bottom:1px solid var(--sand);padding-bottom:2px;transition:border-color .3s,color .3s;
+  }
+  .phone a:hover{color:var(--sea);border-color:var(--sea)}
+  .socials{margin-top:2.2rem;display:flex;gap:1.6rem;justify-content:center}
+  .socials a{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .25s}
+  .socials a:hover{color:var(--sea)}
+
+  footer{padding:2.5rem 0;border-top:1px solid var(--line);text-align:center;font-size:.72rem;letter-spacing:.1em;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <a href="#top" class="mark">Rose Budge</a>
+  <nav>
+    <a href="#about">About</a>
+    <a href="shop.html">Shop</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<div id="top"></div>
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <img class="bg" src="images/hero.jpg" alt="Painting by Rose Budge">
+  <div class="inner">
+    <p class="eyebrow">Instow &nbsp;·&nbsp; North Devon</p>
+    <h1>Rose Budge</h1>
+    <p class="lede">Oil, wax and seaweed gathered from the shore — paintings that carry the colour and energy of the Devon coast.</p>
+  </div>
+  <div class="scrollcue"><span class="line"></span> Scroll</div>
+</div>
+
+<!-- ================= ABOUT ================= -->
+<section class="about" id="about">
+  <div class="wrap grid">
+    <figure class="reveal">
+      <img src="images/about.jpg" alt="Detail of a painting by Rose Budge">
+      <img class="portrait" src="images/rose.jpg" width="640" height="640" alt="Rose Budge">
+    </figure>
+    <div class="reveal">
+      <p class="kicker">The Artist</p>
+      <h2>Coastal magic,<br>layer by layer</h2>
+      <p class="first">I am an artist based in Instow, where the Devon coastline's wild beauty inspires everything I create. My love for creativity started with cake design and textiles, but in the last six years painting has become my true passion.</p>
+      <p>I love collecting seaweed from the beach to work into my paintings — it adds a special texture and tells a story of the sea.</p>
+      <p>I work mainly with oils, mixing in wax to build up layers and create depth. Bright, vivid colours are my thing; I want my paintings to capture the energy and spirit of the coast.</p>
+      <p>I hope my paintings bring a bit of coastal magic into your world.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUOTE ================= -->
+<section class="quote">
+  <div class="wrap reveal">
+    <blockquote>Every piece begins with a walk on the beach.</blockquote>
+    <div class="attrib">Rose Budge</div>
+  </div>
+</section>
+
+<!-- ================= GALLERY ================= -->
+<section class="gallery" id="work">
+  <div class="wrap">
+    <div class="head reveal">
+      <div>
+        <p class="kicker">Selected Work</p>
+        <h2 style="margin:0">The Gallery</h2>
+      </div>
+      <p>Oils layered with wax and foraged seaweed. Click any painting to view it larger.</p>
+    </div>
+    <div class="grid-art" id="grid"></div>
+  </div>
+</section>
+
+<!-- ================= CONTACT ================= -->
+<section class="contact" id="contact">
+  <div class="wrap reveal">
+    <p class="kicker">Enquiries</p>
+    <h2>Get in touch</h2>
+    <p id="contactCopy">For available paintings, commissions, or just to say hello — I'd love to hear from you.</p>
+    <a class="btn" id="emailBtn" href="#">Email Rose</a>
+    <p class="phone" id="phoneLine"></p>
+    <div class="socials" id="socials"></div>
+  </div>
+</section>
+
+<footer>© <span id="yr"></span> Rose Budge · Instow, North Devon</footer>
+
+<!-- ================= LIGHTBOX ================= -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Artwork viewer">
+  <button class="close" id="lbClose" aria-label="Close">&times;</button>
+  <button class="prev" id="lbPrev" aria-label="Previous">&#8249;</button>
+  <button class="next" id="lbNext" aria-label="Next">&#8250;</button>
+  <div style="text-align:center">
+    <img id="lbImg" alt="">
+    <div class="cap" id="lbCap"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/airtable.js"></script>
+<script>
+/* ===============================================================
+   CONTACT DETAILS — fill these in, leave any blank to hide it.
+================================================================*/
+const CONTACT = {
+  email:     "budgerose5@gmail.com",
+  phone:     "07929 973208",           // shown as written; dialled digits are stripped automatically
+  instagram: "",                       // full URL, e.g. "https://instagram.com/rosebudgeart"
+  facebook:  ""                        // full URL
+};
+
+/* ---------------------------------------------------------------
+   ARTWORKS — this section used to be a hardcoded list. It now
+   reads live from the same Airtable base as shop.html, so any
+   painting Rose adds or reorders in her dashboard appears here
+   too without anyone touching this file.
+----------------------------------------------------------------*/
+const MEDIUM = 'Oil, wax & mixed media';
+const grid = document.getElementById('grid');
+let WORKS = [];
+
+RoseAirtable.fetchAvailablePaintings().then(paintings => {
+  WORKS = paintings;
+  if (!WORKS.length) {
+    grid.innerHTML = '<p style="color:var(--muted)">New paintings are on their way — in the meantime, see the <a href="shop.html">shop</a>.</p>';
+    return;
+  }
+  WORKS.forEach((w,i)=>{
+    const label = w.title || 'Painting by Rose Budge';
+    const f = document.createElement('figure');
+    f.className = 'card';
+    f.tabIndex = 0;
+    f.setAttribute('role','button');
+    f.setAttribute('aria-label', 'View ' + label + ' larger');
+    f.innerHTML = `<img src="${RoseAirtable.thumbUrl(w.imageUrl)}" alt="${label}" loading="lazy" decoding="async">
+      <figcaption>${w.title || '&nbsp;'}<em>${MEDIUM}</em></figcaption>`;
+    f.addEventListener('click', ()=>openAt(i));
+    f.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openAt(i); } });
+    grid.appendChild(f);
+  });
+}).catch(err => {
+  console.warn('Gallery failed to load:', err);
+  grid.innerHTML = '<p style="color:var(--muted)">The gallery couldn\'t be loaded right now — see the <a href="shop.html">shop</a> instead.</p>';
+});
+
+/* lightbox */
+const lb=document.getElementById('lb'), lbImg=document.getElementById('lbImg'), lbCap=document.getElementById('lbCap');
+let idx=0;
+function openAt(i){ idx=i; render(); lb.classList.add('open'); document.body.style.overflow='hidden'; }
+function closeLb(){ lb.classList.remove('open'); document.body.style.overflow=''; }
+function render(){
+  const w=WORKS[idx];
+  lbImg.src=RoseAirtable.fullUrl(w.imageUrl);
+  lbImg.alt=w.title || 'Painting by Rose Budge';
+  lbCap.innerHTML = (w.title || '') + `<em>${MEDIUM}</em>`
+    + `<br><a href="shop.html#/work/${encodeURIComponent(w.id)}" style="display:inline-block;margin-top:.6em;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#fff;border-bottom:1px solid rgba(255,255,255,.5)">View in shop &amp; enquire</a>`;
+  // warm the neighbours so paging feels instant
+  [1,-1].forEach(d=>{ const n=WORKS[(idx+d+WORKS.length)%WORKS.length];
+    const p=new Image(); p.src=RoseAirtable.fullUrl(n.imageUrl); });
+}
+function step(n){ idx=(idx+n+WORKS.length)%WORKS.length; render(); }
+document.getElementById('lbClose').onclick=closeLb;
+document.getElementById('lbPrev').onclick=e=>{e.stopPropagation();step(-1)};
+document.getElementById('lbNext').onclick=e=>{e.stopPropagation();step(1)};
+lb.addEventListener('click',e=>{ if(e.target===lb) closeLb(); });
+document.addEventListener('keydown',e=>{
+  if(!lb.classList.contains('open'))return;
+  if(e.key==='Escape')closeLb();
+  if(e.key==='ArrowLeft')step(-1);
+  if(e.key==='ArrowRight')step(1);
+});
+// swipe on touch
+let tx=0;
+lb.addEventListener('touchstart',e=>{tx=e.changedTouches[0].clientX},{passive:true});
+lb.addEventListener('touchend',e=>{ const d=e.changedTouches[0].clientX-tx;
+  if(Math.abs(d)>50) step(d<0?1:-1); },{passive:true});
+
+/* nav background */
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('solid', scrollY > innerHeight*0.85),{passive:true});
+
+/* reveal on scroll */
+const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){e.target.classList.add('in'); io.unobserve(e.target);} }),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* contact details */
+const emailBtn=document.getElementById('emailBtn'), socials=document.getElementById('socials');
+if(CONTACT.email){ emailBtn.href='mailto:'+CONTACT.email; }
+else { emailBtn.remove(); }
+
+const phoneLine=document.getElementById('phoneLine');
+if(CONTACT.phone){
+  const tel=CONTACT.phone.replace(/[^\d+]/g,'');
+  phoneLine.innerHTML=`or call <a href="tel:${tel}">${CONTACT.phone}</a>`;
+} else { phoneLine.remove(); }
+
+if(!CONTACT.email && !CONTACT.phone && !CONTACT.instagram && !CONTACT.facebook){
+  document.getElementById('contactCopy').textContent =
+    'Rose paints and exhibits in Instow, North Devon. Enquiries about available paintings and commissions are always welcome.';
+}
+[['Instagram',CONTACT.instagram],['Facebook',CONTACT.facebook]].forEach(([n,u])=>{
+  if(!u) return;
+  const a=document.createElement('a');
+  a.href=u; a.target='_blank'; a.rel='noopener'; a.textContent=n;
+  socials.appendChild(a);
+});
+
+document.getElementById('yr').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>
