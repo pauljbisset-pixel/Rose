@@ -1,6 +1,10 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+  # Rewrites js/config.js from environment variables before publishing, so
+  # no credential — not even the "safe to expose" read-only Airtable token —
+  # is ever committed to git. See scripts/build-config.js and SETUP.md.
+  command = "node scripts/build-config.js"
 
 [functions]
   node_bundler = "esbuild"

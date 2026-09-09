@@ -66,8 +66,11 @@ Send me:
 - The **base ID** (starts `app…` — visible in the base's API docs, or in
   the base URL)
 - The **read-only token**
-- The **read/write token** (I'll only ever put this in Netlify's env vars,
-  never in a committed file)
+- The **read/write token**
+
+Neither token gets committed to git, even the read-only one — see §4,
+"Environment variables." Both are set once in Netlify and injected into
+the site at build time.
 
 ---
 
@@ -137,15 +140,34 @@ Drop. Reasons:
   for secure writes) work properly with a Git-connected site, and it means
   any future *code* change (e.g. me pushing a fix) deploys automatically
   instead of you needing to drag a new zip in each time.
-- Build settings: no build command needed, publish directory `.`.
+- Build settings: publish directory `.`. Netlify will pick up the build
+  command (`node scripts/build-config.js`) from `netlify.toml` automatically.
 
-Once the site is live on Netlify:
+**Why a build command at all, for a static site:** every credential below
+— including the Airtable *read-only* token, which is safe to expose in the
+browser — gets injected into `js/config.js` from Netlify's environment
+variables at build time, rather than being committed to the repo. GitHub's
+push protection actually caught me trying to commit one of these directly
+the first time round, which was the right call: a token baked into git
+history can't be revoked without rotating it, even a low-risk one. This
+way nothing sensitive ever touches the repo, and rotating any credential
+later is just "update the env var, redeploy" — no code change needed.
 
-1. **Site configuration → Environment variables** — add:
-   - `AIRTABLE_BASE_ID` — the base ID from step 1
-   - `AIRTABLE_WRITE_TOKEN` — the read/write token from step 1 (**never**
-     put this one in a file — env var only)
-2. **Site configuration → Identity → Enable Identity**
+Once the site is live on Netlify, go to **Site configuration → Environment
+variables** and add:
+
+| Variable | Value |
+|---|---|
+| `AIRTABLE_BASE_ID` | base ID from step 1 |
+| `AIRTABLE_READ_ONLY_TOKEN` | the read-only token from step 1 |
+| `AIRTABLE_WRITE_TOKEN` | the read/write token from step 1 — this one is *also* read by `netlify/functions/paintings.js` and `enquiries.js` server-side, and never appears in any browser-shipped file |
+| `EMAILJS_TEMPLATE_ID` | template ID from step 3 |
+| `CLOUDINARY_CLOUD_NAME` | cloud name from step 2 |
+| `CLOUDINARY_UPLOAD_PRESET` | unsigned preset name from step 2 |
+
+Then:
+
+1. **Site configuration → Identity → Enable Identity**
    - Registration preference: **Invite only** (so only Rose can ever sign
      up)
    - Under Identity → Invite users, invite Rose's email address
