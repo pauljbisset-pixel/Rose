@@ -3,6 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* Netlify Identity invite/recovery/confirmation links always redirect to
+   the site root, but the Identity widget (which reads these tokens and
+   prompts to set a password) only runs on dashboard.html. Forward there
+   immediately, before the rest of the homepage loads. */
+(function () {
+  var h = window.location.hash;
+  if (h && /(invite_token|confirmation_token|recovery_token|email_change_token)=/.test(h)) {
+    window.location.replace("/dashboard.html" + h);
+  }
+})();
+</script>
 <title>Rose Budge — Artist, Instow, North Devon</title>
 <meta name="description" content="Rose Budge is an artist based in Instow, North Devon. Vivid oil paintings, layered with wax and seaweed gathered from the Devon coast.">
 <meta property="og:title" content="Rose Budge — Artist, Instow">
