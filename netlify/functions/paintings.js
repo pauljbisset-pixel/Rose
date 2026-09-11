@@ -27,7 +27,10 @@ function toFields(body) {
   if (body.price !== undefined) fields.Price = Number(body.price) || 0;
   if (body.description !== undefined) fields.Description = body.description;
   if (body.size !== undefined) fields.Size = body.size;
-  if (body.category !== undefined) fields.Category = body.category;
+  // Airtable rejects "" for a single select (it reads as "create a new
+  // option called ''", which this token isn't allowed to do) — null clears
+  // the field instead, which is what an empty Category should mean.
+  if (body.category !== undefined) fields.Category = body.category || null;
   if (body.status !== undefined) fields.Status = body.status;
   if (body.imageUrl !== undefined) fields["Image URL"] = body.imageUrl;
   if (body.sortOrder !== undefined) fields["Sort Order"] = Number(body.sortOrder) || 0;
