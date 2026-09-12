@@ -4,7 +4,7 @@
    only ever creates a new row — it can't read or change anything.
    GET/PATCH are gated to Rose's dashboard.
 =========================================================== */
-const { ENQUIRIES_TABLE, airtableRequest, airtableListAll, requireUser, json, errorResponse } = require("./_lib");
+const { ENQUIRIES_TABLE, airtableRequest, airtableListAll, requireSession, json, errorResponse } = require("./_lib");
 
 function normalize(record) {
   const f = record.fields;
@@ -58,13 +58,13 @@ async function handlePatch(body) {
   return json(200, { record: normalize(data.records[0]) });
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
   try {
     if (event.httpMethod === "POST") {
       const body = event.body ? JSON.parse(event.body) : {};
       return await handlePost(body);
     }
-    requireUser(context);
+    requireSession(event);
     if (event.httpMethod === "GET") return await handleGet();
     if (event.httpMethod === "PATCH") {
       const body = event.body ? JSON.parse(event.body) : {};

@@ -1,18 +1,21 @@
 /* ===========================================================
    Rose Budge — studio dashboard
-   Netlify Identity login gate, Airtable CRUD via the gated
-   /.netlify/functions/paintings + /enquiries functions, and a
-   Cloudinary unsigned upload widget for photos from Rose's phone.
+   Own magic-link login (see js/config.js note + netlify/functions/
+   auth.js) gates Airtable CRUD via /.netlify/functions/paintings +
+   /enquiries, plus a Cloudinary unsigned upload widget for photos
+   from Rose's phone.
 =========================================================== */
 (function () {
   const CFG = window.ROSE_CONFIG;
   const app = document.getElementById("app");
   const logoutBtn = document.getElementById("logoutBtn");
   const currentUserEmail = document.getElementById("currentUserEmail");
-  const changePasswordBtn = document.getElementById("changePasswordBtn");
+
+  const SESSION_KEY = "rb_session_v1";
 
   const state = {
-    user: null,
+    sessionToken: null,
+    userEmail: null,
     paintings: [],
     paintingsLoaded: false,
     enquiries: [],
@@ -37,17 +40,41 @@
     }[c]));
   }
 
+  function saveSession(sessionToken, email) {
+    state.sessionToken = sessionToken;
+    state.userEmail = email;
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify({ sessionToken, email })); } catch (e) { /* ignore */ }
+  }
+
+  function loadStoredSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearSession() {
+    state.sessionToken = null;
+    state.userEmail = null;
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
+  }
+
   async function authFetch(path, options) {
-    if (!state.user) throw new Error("Not signed in");
-    const token = await state.user.jwt();
+    if (!state.sessionToken) throw new Error("Not signed in");
     const res = await fetch(path, Object.assign({}, options, {
       headers: Object.assign(
-        { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        { "Content-Type": "application/json", Authorization: `Bearer ${state.sessionToken}` },
         (options && options.headers) || {}
       )
     }));
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    if (!res.ok) {
+      if (res.status === 401) { clearSession(); renderLoginGate("Your session's expired — please sign in again."); }
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
     return data;
   }
 
@@ -72,14 +99,46 @@
       <div class="login-gate">
         <p class="kicker">Studio</p>
         <h1>Rose's dashboard</h1>
-        <p>Sign in to add paintings, edit details, reorder the shop, and mark things sold.</p>
+        <p>Enter your email and we'll send you a link to sign in — no password to remember.</p>
         ${notice ? `<p class="form-error" style="text-align:left;margin-bottom:20px">${esc(notice)}</p>` : ""}
-        <button class="btn" id="loginBtn">Sign in</button>
+        <form id="loginForm" style="display:flex;flex-direction:column;gap:14px;max-width:320px;margin:0 auto">
+          <label class="form-field" style="text-align:left">Email
+            <input type="email" id="loginEmail" placeholder="you@example.com" required>
+          </label>
+          <button type="submit" class="btn" id="loginBtn">Send me a link</button>
+        </form>
+        <p id="loginStatus" class="form-msg" style="color:var(--muted)"></p>
       </div>`;
-    document.getElementById("loginBtn").addEventListener("click", () => netlifyIdentity.open("login"));
+    document.getElementById("loginForm").addEventListener("submit", onRequestLogin);
     logoutBtn.style.display = "none";
     currentUserEmail.style.display = "none";
-    changePasswordBtn.style.display = "none";
+  }
+
+  async function onRequestLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const btn = document.getElementById("loginBtn");
+    const statusEl = document.getElementById("loginStatus");
+    if (!email) return;
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    statusEl.textContent = "";
+    try {
+      const res = await fetch("/.netlify/functions/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request", email })
+      });
+      if (!res.ok) throw new Error("Something went wrong sending the link.");
+      statusEl.style.color = "var(--sea)";
+      statusEl.textContent = "If that email's set up for this dashboard, a sign-in link is on its way — check your inbox.";
+      btn.textContent = "Link sent";
+    } catch (err) {
+      statusEl.style.color = "#B4403A";
+      statusEl.textContent = err.message;
+      btn.disabled = false;
+      btn.textContent = "Send me a link";
+    }
   }
 
   function renderLoading(msg) {
@@ -98,9 +157,8 @@
 
   async function renderApp() {
     logoutBtn.style.display = "inline-block";
-    changePasswordBtn.style.display = "inline-block";
     currentUserEmail.style.display = "inline";
-    currentUserEmail.textContent = state.user && state.user.email ? `Signed in as ${state.user.email}` : "";
+    currentUserEmail.textContent = state.userEmail ? `Signed in as ${state.userEmail}` : "";
     if (!state.paintingsLoaded) {
       renderLoading("Loading your paintings…");
       try {
@@ -477,7 +535,7 @@
     });
   }
 
-  /* ---------------- boot / identity ---------------- */
+  /* ---------------- boot / login ---------------- */
 
   function boot() {
     state.paintingsLoaded = false;
@@ -485,55 +543,48 @@
     renderApp();
   }
 
-  logoutBtn.addEventListener("click", () => netlifyIdentity.logout());
-  changePasswordBtn.addEventListener("click", () => netlifyIdentity.open("user"));
-
-  netlifyIdentity.on("init", (user) => {
-    if (user) { state.user = user; boot(); } else { renderLoginGate(); }
-  });
-  netlifyIdentity.on("error", (err) => {
-    // The widget can fail silently while auto-processing an invite/recovery
-    // link (expired, already used, or a network hiccup) and leave its modal
-    // stuck open and invisible, blocking every click on the page. Force it
-    // closed and give a plain-language way forward instead of a frozen page.
-    console.warn("Identity error:", err);
-    netlifyIdentity.close();
-    renderLoginGate(
-      "That link has expired or has already been used. Click Sign In below, " +
-      "then use “Forgot password?” to get a fresh one — and open it " +
-      "as soon as it arrives, on the device you'll use to sign in."
-    );
-  });
-  netlifyIdentity.on("login", (user) => {
-    state.user = user;
-    netlifyIdentity.close();
-    boot();
-  });
-  netlifyIdentity.on("logout", () => {
-    state.user = null;
+  logoutBtn.addEventListener("click", () => {
+    clearSession();
     state.paintings = [];
     state.paintingsLoaded = false;
     renderLoginGate();
   });
 
-  netlifyIdentity.init();
-
-  // Belt and braces: if a hash token is present, the widget should resolve
-  // it (via "login" or "error") within a few seconds. If it silently hangs
-  // instead — a blocked iframe, a dropped request — force the modal closed
-  // and hand back a usable page rather than leaving it frozen indefinitely.
-  if (/(invite_token|confirmation_token|recovery_token|email_change_token)=/.test(window.location.hash)) {
-    let resolved = false;
-    netlifyIdentity.on("login", () => { resolved = true; });
-    netlifyIdentity.on("error", () => { resolved = true; });
-    setTimeout(() => {
-      if (!resolved) {
-        netlifyIdentity.close();
-        renderLoginGate(
-          "That link took too long to process. Click Sign In below, then " +
-          "use “Forgot password?” to get a fresh one."
-        );
-      }
-    }, 8000);
+  async function verifyMagicLink(token) {
+    renderLoading("Signing you in…");
+    try {
+      const res = await fetch("/.netlify/functions/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", token })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "That link isn't valid — please request a new one.");
+      saveSession(data.sessionToken, data.email);
+      // Drop the token from the address bar — it's single-use and short-lived,
+      // no reason to leave it sitting in browser history.
+      window.history.replaceState({}, "", window.location.pathname);
+      boot();
+    } catch (err) {
+      renderLoginGate(err.message);
+    }
   }
+
+  function init() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      verifyMagicLink(token);
+      return;
+    }
+    const stored = loadStoredSession();
+    if (stored && stored.sessionToken) {
+      saveSession(stored.sessionToken, stored.email);
+      boot();
+      return;
+    }
+    renderLoginGate();
+  }
+
+  init();
 })();

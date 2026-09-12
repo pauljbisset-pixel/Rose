@@ -1,10 +1,10 @@
 /* ===========================================================
    /.netlify/functions/paintings
-   Identity-gated CRUD + reorder for the Airtable Paintings table.
+   Session-gated CRUD + reorder for the Airtable Paintings table.
    Used only by dashboard.html — the public shop reads Airtable
    directly with a read-only token (see js/airtable.js).
 =========================================================== */
-const { PAINTINGS_TABLE, airtableRequest, airtableListAll, requireUser, json, errorResponse } = require("./_lib");
+const { PAINTINGS_TABLE, airtableRequest, airtableListAll, requireSession, json, errorResponse } = require("./_lib");
 
 function normalize(record) {
   const f = record.fields;
@@ -92,9 +92,9 @@ async function handleDelete(id) {
   return json(200, { ok: true });
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
   try {
-    requireUser(context);
+    requireSession(event);
     const body = event.body ? JSON.parse(event.body) : {};
     switch (event.httpMethod) {
       case "GET":

@@ -100,14 +100,15 @@ Send me:
 
 ---
 
-## 3. EmailJS — the enquiry email to Rose
+## 3. EmailJS — two templates: the enquiry email, and the dashboard login link
 
 Using your existing account (service `service_3zklcnj`, public key
 `ZJel9MV1Hctfuo6cU` — already in the code).
 
-Create a **new template** (recommended, rather than adapting an existing
-one, since the variables are specific to this form) with these template
-variables — add them into the template body however reads naturally, e.g.:
+**Template A — the enquiry email to Rose.** Create a **new template**
+(recommended, rather than adapting an existing one, since the variables
+are specific to this form) with these variables — add them into the
+template body however reads naturally, e.g.:
 
 ```
 New enquiry from {{from_name}} ({{from_email}}, {{from_phone}})
@@ -124,12 +125,42 @@ Submitted: {{submitted_at}}
 Set the template's **To email** to `budgerose5@gmail.com` (or use the
 `{{to_email}}` variable, which the code also sends).
 
+**Template B — the dashboard sign-in link.** A second, separate template
+(the dashboard's own login — see §4 below for why this replaced Netlify
+Identity) with just these variables:
+
+```
+Click below to sign in to your studio dashboard. This link works once
+and expires in {{expires_in}}.
+
+{{login_link}}
+
+If you didn't request this, you can ignore this email.
+```
+
+Set this template's **To email** to `{{to_email}}` (there's no fixed
+address this time — it needs to go to whoever's actually requesting the
+link, which could be you during testing or Rose once she's set up).
+
 Send me:
-- The new **template ID**
+- The enquiry template's **ID** (Template A)
+- The login-link template's **ID** (Template B)
 
 ---
 
-## 4. Netlify — hosting, Identity, and environment variables
+## 4. Netlify — hosting, login, and environment variables
+
+**Why not Netlify Identity:** that's what this was originally built on,
+but its hosted email delivery and account-settings widget turned out to
+be unreliable in practice during testing — rate limits with no clear
+recovery, invite/recovery tokens failing to process, and a "change
+password" action that silently did nothing (a stuck, invisible iframe).
+None of that was something fixable from the code side. Rose's login is
+now something built and controlled directly: she enters her email on
+`/dashboard.html`, gets a one-time link by email (via EmailJS, which has
+been reliable throughout — same service the enquiry emails already use),
+and clicking it signs her in for 30 days. No third-party identity widget
+in the loop, no password to forget either.
 
 **Deploy method:** I'd recommend connecting this repo to Netlify via Git
 (Netlify → Add new site → Import from Git) rather than manual Netlify
@@ -161,21 +192,21 @@ variables** and add:
 | `AIRTABLE_BASE_ID` | base ID from step 1 |
 | `AIRTABLE_READ_ONLY_TOKEN` | the read-only token from step 1 |
 | `AIRTABLE_WRITE_TOKEN` | the read/write token from step 1 — this one is *also* read by `netlify/functions/paintings.js` and `enquiries.js` server-side, and never appears in any browser-shipped file |
-| `EMAILJS_TEMPLATE_ID` | template ID from step 3 |
+| `EMAILJS_TEMPLATE_ID` | the enquiry template ID (Template A) from step 3 |
+| `EMAILJS_LOGIN_TEMPLATE_ID` | the login-link template ID (Template B) from step 3 |
 | `CLOUDINARY_CLOUD_NAME` | cloud name from step 2 |
 | `CLOUDINARY_UPLOAD_PRESET` | unsigned preset name from step 2 |
+| `AUTH_SECRET` | A random value for signing login tokens — treat it like a password, since it's what makes a session token unforgeable. I generated one locally and will send it to you directly rather than writing it in this file (this file is in your public GitHub repo — anyone could read a secret committed here). Or generate your own: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `DASHBOARD_ALLOWED_EMAIL` | the email address(es) allowed to log in, comma-separated — e.g. `budgerose5@gmail.com`, or add a couple more while testing: `budgerose5@gmail.com,pauljbisset@gmail.com` |
 
-Then:
+Then confirm **Functions** picked up `netlify/functions/paintings.js`,
+`enquiries.js`, and `auth.js` after the first deploy (Netlify → Functions
+tab).
 
-1. **Site configuration → Identity → Enable Identity**
-   - Registration preference: **Invite only** (so only Rose can ever sign
-     up)
-   - Under Identity → Invite users, invite Rose's email address
-   - She'll get an email to set her password — that's her login for
-     `/dashboard.html`
-3. Confirm **Functions** picked up `netlify/functions/paintings.js` and
-   `netlify/functions/enquiries.js` after the first deploy (Netlify →
-   Functions tab)
+**Cleanup (optional):** Identity is no longer used by this site at all —
+safe to leave it enabled and ignored, or turn it off under Site
+configuration → Identity if you'd rather tidy up. Either way, nothing in
+the code touches it any more.
 
 Send me (once live):
 - The Netlify site URL, so I can double check everything end-to-end and
@@ -191,15 +222,20 @@ Send me (once live):
 - **`shop.html`** — gallery with optional category filters, painting
   detail pages, basket (drawer + full page), checkout as an enquiry form,
   thank-you screen. Reads Airtable directly with the read-only token.
-- **`dashboard.html`** — Rose's private admin at `/dashboard.html` (not
-  linked anywhere public). Netlify Identity login gate, stats cards,
-  Paintings tab (drag-to-reorder, inline edit, Cloudinary photo upload,
-  Available/Reserved/Sold status, delete), Enquiries tab (reads what
-  visitors submit, lets Rose mark New/Contacted/Closed).
+- **`dashboard.html`** — Rose's private admin, linked quietly from the
+  homepage footer ("Studio") rather than the main nav. Own magic-link
+  login (email in, click the link, signed in for 30 days — see §4),
+  stats cards, Paintings tab (drag-to-reorder, inline edit, Cloudinary
+  photo upload, Available/Reserved/Sold status, delete), Enquiries tab
+  (reads what visitors submit, lets Rose mark New/Contacted/Closed).
 - **`netlify/functions/paintings.js`** and **`enquiries.js`** — hold the
-  Airtable write token server-side; the dashboard calls these (proving
-  Rose is logged in via her Netlify Identity token) rather than ever
-  shipping a write-capable token to the browser.
+  Airtable write token server-side; the dashboard calls these with a
+  signed session token (proving Rose clicked her login link) rather than
+  ever shipping a write-capable Airtable token to the browser.
+- **`netlify/functions/auth.js`** — the login itself: emails a short-lived
+  link to an allowed address, then exchanges a valid click for a 30-day
+  session token. Stateless (no session database) — just an HMAC-signed
+  token checked against `AUTH_SECRET`.
 - The original 22 painting photos are still in `images/full` and
   `images/thumb` — useful as a starting point: once Cloudinary is set up,
   you could upload these into it to seed the first batch of `Paintings`
