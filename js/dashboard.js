@@ -8,6 +8,7 @@
   const CFG = window.ROSE_CONFIG;
   const app = document.getElementById("app");
   const logoutBtn = document.getElementById("logoutBtn");
+  const currentUserEmail = document.getElementById("currentUserEmail");
 
   const state = {
     user: null,
@@ -76,6 +77,7 @@
       </div>`;
     document.getElementById("loginBtn").addEventListener("click", () => netlifyIdentity.open("login"));
     logoutBtn.style.display = "none";
+    currentUserEmail.style.display = "none";
   }
 
   function renderLoading(msg) {
@@ -94,6 +96,8 @@
 
   async function renderApp() {
     logoutBtn.style.display = "inline-block";
+    currentUserEmail.style.display = "inline";
+    currentUserEmail.textContent = state.user && state.user.email ? `Signed in as ${state.user.email}` : "";
     if (!state.paintingsLoaded) {
       renderLoading("Loading your paintings…");
       try {
