@@ -9,6 +9,7 @@
   const app = document.getElementById("app");
   const logoutBtn = document.getElementById("logoutBtn");
   const currentUserEmail = document.getElementById("currentUserEmail");
+  const changePasswordBtn = document.getElementById("changePasswordBtn");
 
   const state = {
     user: null,
@@ -78,6 +79,7 @@
     document.getElementById("loginBtn").addEventListener("click", () => netlifyIdentity.open("login"));
     logoutBtn.style.display = "none";
     currentUserEmail.style.display = "none";
+    changePasswordBtn.style.display = "none";
   }
 
   function renderLoading(msg) {
@@ -96,6 +98,7 @@
 
   async function renderApp() {
     logoutBtn.style.display = "inline-block";
+    changePasswordBtn.style.display = "inline-block";
     currentUserEmail.style.display = "inline";
     currentUserEmail.textContent = state.user && state.user.email ? `Signed in as ${state.user.email}` : "";
     if (!state.paintingsLoaded) {
@@ -483,6 +486,7 @@
   }
 
   logoutBtn.addEventListener("click", () => netlifyIdentity.logout());
+  changePasswordBtn.addEventListener("click", () => netlifyIdentity.open("user"));
 
   netlifyIdentity.on("init", (user) => {
     if (user) { state.user = user; boot(); } else { renderLoginGate(); }
