@@ -198,6 +198,7 @@ variables** and add:
 | `AIRTABLE_READ_ONLY_TOKEN` | the read-only token from step 1 |
 | `AIRTABLE_WRITE_TOKEN` | the read/write token from step 1 — this one is *also* read by `netlify/functions/paintings.js` and `enquiries.js` server-side, and never appears in any browser-shipped file |
 | `EMAILJS_TEMPLATE_ID` | the shared template ID from step 3 — used for both the enquiry and login emails |
+| `EMAILJS_PRIVATE_KEY` | Account → Security → tick "Allow EmailJS API for non-browser applications" (needed since the login email is sent from a Netlify Function, not a browser, so EmailJS can't check an Origin header the way it does for the enquiry email) → the private key that unlocks. A real secret — never commit it, only ever as this env var. |
 | `CLOUDINARY_CLOUD_NAME` | cloud name from step 2 |
 | `CLOUDINARY_UPLOAD_PRESET` | unsigned preset name from step 2 |
 | `AUTH_SECRET` | A random value for signing login tokens — treat it like a password, since it's what makes a session token unforgeable. I generated one locally and will send it to you directly rather than writing it in this file (this file is in your public GitHub repo — anyone could read a secret committed here). Or generate your own: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |

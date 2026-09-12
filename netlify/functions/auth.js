@@ -32,6 +32,8 @@ async function sendMagicLinkEmail(email, link) {
   // paid plan allows a dedicated template later).
   const templateId = process.env.EMAILJS_LOGIN_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID;
   if (!templateId) throw new Error("EMAILJS_TEMPLATE_ID is not set in Netlify environment variables");
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+  if (!privateKey) throw new Error("EMAILJS_PRIVATE_KEY is not set in Netlify environment variables");
   const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -39,6 +41,10 @@ async function sendMagicLinkEmail(email, link) {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
       user_id: EMAILJS_PUBLIC_KEY,
+      // Required once "Allow EmailJS API for non-browser applications" is
+      // enabled on the account — a server-side call has no Origin header
+      // for EmailJS to check, so it authenticates with this instead.
+      accessToken: privateKey,
       template_params: {
         email_kind: "Sign-In Link",
         to_email: email,
