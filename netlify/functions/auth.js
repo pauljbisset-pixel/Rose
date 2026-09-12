@@ -51,9 +51,12 @@ async function sendMagicLinkEmail(email, link) {
         from_name: "Studio sign-in",
         from_email: "",
         from_phone: "One-time link",
-        // EmailJS substitutes this raw, so real HTML (a clickable button)
-        // renders correctly inside the template's message box.
-        message:
+        // EmailJS HTML-escapes {{message}} by default (right — it holds
+        // arbitrary visitor text on the enquiry email), so a real link has
+        // to go through the separate {{{action_html}}} slot instead, which
+        // the template renders unescaped.
+        message: "",
+        action_html:
           `<a href="${link}" style="font-style:normal;font-weight:bold;` +
           `color:#15303C;text-decoration:underline">Click here to sign in →</a>`,
         list_label: "Note",

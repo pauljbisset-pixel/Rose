@@ -401,6 +401,7 @@
       list_label: "Paintings enquired about",
       highlight_label: "Total",
       footer_label: "Submitted",
+      action_html: "",
       to_email: CFG.contact.email,
       from_name: data.name,
       from_email: data.email,

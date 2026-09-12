@@ -146,7 +146,13 @@ If you're adapting a template you already built for the enquiry email
 `highlight_label`, and `footer_label` wrap whatever static label text is
 currently hardcoded in those four spots (e.g. a fixed "Paintings
 enquired about" heading becomes `{{list_label}}`) — everything else can
-stay as it is.
+stay as it is. One more addition, right after wherever `{{message}}`
+sits: add `{{{action_html}}}` immediately after it (triple braces, not
+double) — `{{message}}{{{action_html}}}`. EmailJS escapes double-brace
+variables by default, which is right for the enquiry message (arbitrary
+visitor text shouldn't be able to inject HTML into Rose's inbox) but
+would turn the login email's actual clickable link into visible literal
+text — triple braces render as real HTML instead.
 
 Send me:
 - The template's **ID**
