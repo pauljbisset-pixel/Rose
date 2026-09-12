@@ -65,12 +65,13 @@
 
   /* ---------------- auth screens ---------------- */
 
-  function renderLoginGate() {
+  function renderLoginGate(notice) {
     app.innerHTML = `
       <div class="login-gate">
         <p class="kicker">Studio</p>
         <h1>Rose's dashboard</h1>
         <p>Sign in to add paintings, edit details, reorder the shop, and mark things sold.</p>
+        ${notice ? `<p class="form-error" style="text-align:left;margin-bottom:20px">${esc(notice)}</p>` : ""}
         <button class="btn" id="loginBtn">Sign in</button>
       </div>`;
     document.getElementById("loginBtn").addEventListener("click", () => netlifyIdentity.open("login"));
@@ -482,6 +483,19 @@
   netlifyIdentity.on("init", (user) => {
     if (user) { state.user = user; boot(); } else { renderLoginGate(); }
   });
+  netlifyIdentity.on("error", (err) => {
+    // The widget can fail silently while auto-processing an invite/recovery
+    // link (expired, already used, or a network hiccup) and leave its modal
+    // stuck open and invisible, blocking every click on the page. Force it
+    // closed and give a plain-language way forward instead of a frozen page.
+    console.warn("Identity error:", err);
+    netlifyIdentity.close();
+    renderLoginGate(
+      "That link has expired or has already been used. Click Sign In below, " +
+      "then use “Forgot password?” to get a fresh one — and open it " +
+      "as soon as it arrives, on the device you'll use to sign in."
+    );
+  });
   netlifyIdentity.on("login", (user) => {
     state.user = user;
     netlifyIdentity.close();
@@ -495,4 +509,23 @@
   });
 
   netlifyIdentity.init();
+
+  // Belt and braces: if a hash token is present, the widget should resolve
+  // it (via "login" or "error") within a few seconds. If it silently hangs
+  // instead — a blocked iframe, a dropped request — force the modal closed
+  // and hand back a usable page rather than leaving it frozen indefinitely.
+  if (/(invite_token|confirmation_token|recovery_token|email_change_token)=/.test(window.location.hash)) {
+    let resolved = false;
+    netlifyIdentity.on("login", () => { resolved = true; });
+    netlifyIdentity.on("error", () => { resolved = true; });
+    setTimeout(() => {
+      if (!resolved) {
+        netlifyIdentity.close();
+        renderLoginGate(
+          "That link took too long to process. Click Sign In below, then " +
+          "use “Forgot password?” to get a fresh one."
+        );
+      }
+    }, 8000);
+  }
 })();
