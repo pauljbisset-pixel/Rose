@@ -25,8 +25,13 @@ function siteUrl(event) {
 }
 
 async function sendMagicLinkEmail(email, link) {
-  const templateId = process.env.EMAILJS_LOGIN_TEMPLATE_ID;
-  if (!templateId) throw new Error("EMAILJS_LOGIN_TEMPLATE_ID is not set in Netlify environment variables");
+  // Reuses the same template as the enquiry email (see js/shop.js) rather
+  // than requiring a second one — EmailJS template quotas are per-template,
+  // not per-send, so one template driven by more variables covers both.
+  // EMAILJS_LOGIN_TEMPLATE_ID is only needed if that ever changes (e.g. a
+  // paid plan allows a dedicated template later).
+  const templateId = process.env.EMAILJS_LOGIN_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID;
+  if (!templateId) throw new Error("EMAILJS_TEMPLATE_ID is not set in Netlify environment variables");
   const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -35,9 +40,22 @@ async function sendMagicLinkEmail(email, link) {
       template_id: templateId,
       user_id: EMAILJS_PUBLIC_KEY,
       template_params: {
+        email_kind: "Sign-In Link",
         to_email: email,
-        login_link: link,
-        expires_in: "15 minutes"
+        from_name: "Studio sign-in",
+        from_email: "",
+        from_phone: "One-time link",
+        // EmailJS substitutes this raw, so real HTML (a clickable button)
+        // renders correctly inside the template's message box.
+        message:
+          `<a href="${link}" style="font-style:normal;font-weight:bold;` +
+          `color:#15303C;text-decoration:underline">Click here to sign in →</a>`,
+        list_label: "Note",
+        items: "If you didn't request this, you can safely ignore this email.",
+        highlight_label: "Expires in",
+        total: "15 minutes",
+        footer_label: "Requested",
+        submitted_at: new Date().toLocaleString("en-GB")
       }
     })
   });

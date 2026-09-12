@@ -100,51 +100,56 @@ Send me:
 
 ---
 
-## 3. EmailJS — two templates: the enquiry email, and the dashboard login link
+## 3. EmailJS — one template, serving both the enquiry email and the dashboard login link
 
 Using your existing account (service `service_3zklcnj`, public key
-`ZJel9MV1Hctfuo6cU` — already in the code).
+`ZJel9MV1Hctfuo6cU` — already in the code). Both emails run through the
+**same template** — EmailJS's plan limits are on how many templates you
+can *create*, not how many variables one template can use or how many
+times it's sent, so one flexible template covers both rather than
+needing a second.
 
-**Template A — the enquiry email to Rose.** Create a **new template**
-(recommended, rather than adapting an existing one, since the variables
-are specific to this form) with these variables — add them into the
-template body however reads naturally, e.g.:
+Create (or you may already have) a template with these variables:
 
 ```
-New enquiry from {{from_name}} ({{from_email}}, {{from_phone}})
+{{email_kind}}
+
+{{from_name}}  ·  {{from_email}}  ·  {{from_phone}}
 
 {{message}}
 
-Paintings enquired about:
+{{list_label}}
 {{items}}
 
-Total: {{total}}
-Submitted: {{submitted_at}}
+{{highlight_label}}: {{total}}
+{{footer_label}} {{submitted_at}}
 ```
 
-Set the template's **To email** to `budgerose5@gmail.com` (or use the
-`{{to_email}}` variable, which the code also sends).
+Set the template's **To email** to `{{to_email}}` (not a fixed address —
+it needs to go to whoever the code sends it to, which differs between
+the two uses below).
 
-**Template B — the dashboard sign-in link.** A second, separate template
-(the dashboard's own login — see §4 below for why this replaced Netlify
-Identity) with just these variables:
+For the **enquiry email**, the code (`js/shop.js`) sends:
+`email_kind` = "New Shop Enquiry", `list_label` = "Paintings enquired
+about", `highlight_label` = "Total", `footer_label` = "Submitted", plus
+the visitor's actual name/email/phone/message/items/total — so it reads
+exactly as a normal enquiry notification.
 
-```
-Click below to sign in to your studio dashboard. This link works once
-and expires in {{expires_in}}.
+For the **dashboard login email**, the code (`netlify/functions/auth.js`)
+sends different values through those same slots — `email_kind` = "Sign-In
+Link", a clickable sign-in link in place of the message, "Expires in: 15
+minutes" in place of the total, and so on — so the same layout reads
+sensibly as a login email instead.
 
-{{login_link}}
-
-If you didn't request this, you can ignore this email.
-```
-
-Set this template's **To email** to `{{to_email}}` (there's no fixed
-address this time — it needs to go to whoever's actually requesting the
-link, which could be you during testing or Rose once she's set up).
+If you're adapting a template you already built for the enquiry email
+(rather than starting fresh), just make sure `email_kind`, `list_label`,
+`highlight_label`, and `footer_label` wrap whatever static label text is
+currently hardcoded in those four spots (e.g. a fixed "Paintings
+enquired about" heading becomes `{{list_label}}`) — everything else can
+stay as it is.
 
 Send me:
-- The enquiry template's **ID** (Template A)
-- The login-link template's **ID** (Template B)
+- The template's **ID**
 
 ---
 
@@ -192,12 +197,16 @@ variables** and add:
 | `AIRTABLE_BASE_ID` | base ID from step 1 |
 | `AIRTABLE_READ_ONLY_TOKEN` | the read-only token from step 1 |
 | `AIRTABLE_WRITE_TOKEN` | the read/write token from step 1 — this one is *also* read by `netlify/functions/paintings.js` and `enquiries.js` server-side, and never appears in any browser-shipped file |
-| `EMAILJS_TEMPLATE_ID` | the enquiry template ID (Template A) from step 3 |
-| `EMAILJS_LOGIN_TEMPLATE_ID` | the login-link template ID (Template B) from step 3 |
+| `EMAILJS_TEMPLATE_ID` | the shared template ID from step 3 — used for both the enquiry and login emails |
 | `CLOUDINARY_CLOUD_NAME` | cloud name from step 2 |
 | `CLOUDINARY_UPLOAD_PRESET` | unsigned preset name from step 2 |
 | `AUTH_SECRET` | A random value for signing login tokens — treat it like a password, since it's what makes a session token unforgeable. I generated one locally and will send it to you directly rather than writing it in this file (this file is in your public GitHub repo — anyone could read a secret committed here). Or generate your own: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `DASHBOARD_ALLOWED_EMAIL` | the email address(es) allowed to log in, comma-separated — e.g. `budgerose5@gmail.com`, or add a couple more while testing: `budgerose5@gmail.com,pauljbisset@gmail.com` |
+
+(If you later move to an EmailJS plan with more templates and want a
+fully separate one for logins, set `EMAILJS_LOGIN_TEMPLATE_ID` too — the
+code checks for it first and falls back to `EMAILJS_TEMPLATE_ID` if it's
+not set, so this is optional, not required.)
 
 Then confirm **Functions** picked up `netlify/functions/paintings.js`,
 `enquiries.js`, and `auth.js` after the first deploy (Netlify → Functions

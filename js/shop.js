@@ -393,6 +393,14 @@
     const submittedAt = new Date().toLocaleString("en-GB");
 
     const templateParams = {
+      // email_kind/list_label/highlight_label/footer_label let this same
+      // template also serve the dashboard's login-link email (see
+      // netlify/functions/auth.js) — keep these matching the template's
+      // original wording so enquiry emails look exactly as before.
+      email_kind: "New Shop Enquiry",
+      list_label: "Paintings enquired about",
+      highlight_label: "Total",
+      footer_label: "Submitted",
       to_email: CFG.contact.email,
       from_name: data.name,
       from_email: data.email,
