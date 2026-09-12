@@ -129,7 +129,10 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "request", email })
       });
-      if (!res.ok) throw new Error("Something went wrong sending the link.");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Something went wrong sending the link.");
+      }
       statusEl.style.color = "var(--sea)";
       statusEl.textContent = "If that email's set up for this dashboard, a sign-in link is on its way — check your inbox.";
       btn.textContent = "Link sent";
