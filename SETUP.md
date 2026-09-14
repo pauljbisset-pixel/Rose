@@ -230,6 +230,53 @@ Send me (once live):
 
 ---
 
+## 5. Prints — pricing and fulfillment
+
+Every painting can now also be ordered as an unframed print, in a choice
+of five sizes, shipped rolled in a tube. This is config-driven, not stored
+in Airtable — there's nothing to set up here, but it's worth understanding
+how the numbers work so the prices stay sensible if costs change.
+
+**Where the prices live:** `js/config.js`, the `prints.sizes` array. Each
+entry is `{ size, price }` — edit the `price` values directly (no code
+change needed) if costs from the print service change or you want to
+adjust margins.
+
+**Fulfillment (manual, via [doxdirect.com](https://www.doxdirect.com/)):**
+same enquiry-only model as originals — nothing is charged automatically.
+When a print enquiry comes in:
+1. Rose replies to arrange payment (bank transfer, as with originals) and
+   confirms the delivery address (the checkout form now asks for one,
+   since prints — unlike originals — always need to be posted).
+2. Once paid, she (or you) place the actual print order on doxdirect.com
+   using the painting's full-size image (already on Cloudinary — the
+   same image used on the painting's detail page) and the size the
+   customer chose.
+3. Doxdirect prints and ships directly to the customer.
+
+**How the prices were worked out** — doxdirect's per-print cost, plus a
+delivery cost of roughly £8, plus a profit margin that scales with size
+(so a small A4 isn't stuck with the same flat markup as a large A0):
+
+| Size | Print cost | Delivery | Break-even | **Price charged** | Profit |
+|---|---|---|---|---|---|
+| A4 | £1 | £8 | £9 | **£35** | £26 |
+| A3 | £3 | £8 | £11 | **£40** | £29 |
+| A2 | £11 | £8 | £19 | **£55** | £36 |
+| A1 | £18 | £8 | £26 | **£75** | £49 |
+| A0 | £25 | £8 | £33 | **£95** | £62 |
+
+The £8 delivery is only charged once per doxdirect order, no matter how
+many prints are in it — but each print's price already has its own £8
+folded in, so if a customer orders two prints together in one enquiry,
+the actual delivery cost is a little lower than what's priced in. That's
+a deliberate simplification (one flat number per size, not a "delivery
+calculated at checkout" system) and just means multi-print orders are
+slightly more profitable than the table above shows — no adjustment
+needed on your end.
+
+---
+
 ## What I've already built, waiting on the above
 
 - **`index.html`** — the existing portfolio/about page, now reading the
@@ -238,6 +285,8 @@ Send me (once live):
 - **`shop.html`** — gallery with optional category filters, painting
   detail pages, basket (drawer + full page), checkout as an enquiry form,
   thank-you screen. Reads Airtable directly with the read-only token.
+  Every painting can also be added as a print in a choice of sizes (see
+  §5) alongside, or instead of, the original.
 - **`dashboard.html`** — Rose's private admin, linked quietly from the
   homepage footer ("Studio") rather than the main nav. Own magic-link
   login (email in, click the link, signed in for 30 days — see §4),
@@ -277,3 +326,12 @@ Send me (once live):
 - **Delete added to the dashboard** (not explicitly requested, but "Save
   a mistake" felt incomplete without it) — gated the same way as every
   other write, with a confirmation prompt.
+- **Print sizes/prices are the same for every painting**, set once in
+  `js/config.js` rather than per-painting in Airtable — simplest option
+  given every painting's print goes through the same fixed-size doxdirect
+  process. If different paintings ever need different print pricing,
+  that'd need a small rework (moving the price table into Airtable), but
+  wasn't needed for this.
+- **Delivery address added to the checkout form**, optional for
+  originals but effectively required for prints — prints always get
+  posted, so there's now somewhere for the customer to put that.
