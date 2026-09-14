@@ -31,6 +31,12 @@ reads/writes these names directly.
 | `Status`     | Single select: `Available`, `Reserved`, `Sold` | Default new records to `Available` |
 | `Image URL`  | Single line text (or "URL" type)        | Filled in automatically by the dashboard's photo upload — leave blank when you create the table |
 | `Sort Order` | Number                                  | Controls shop order; the dashboard's drag-to-reorder writes this for you |
+| `Hearts`     | Number (integer)                        | Optional but recommended — powers the shop's "heart a painting" feature and the dashboard's "Most loved" stat. Leave blank/0 on every row; visitors' hearts increment it. **If you skip this field, hearting still works for visitors (it shows locally in their browser either way) — it just won't add up across visitors until the field exists**, so no rush, add it whenever. |
+| `Story`      | Long text                               | Optional — a short personal note Rose can add per painting ("painted after a stormy walk to Instow beach…"), shown on that painting's page. Leave blank to skip it for any painting. |
+
+(No field is needed for "new painting" badges or the dashboard's welcome-back
+recap — those use Airtable's built-in created-time and the browser's local
+storage respectively, nothing to set up.)
 
 ### Table: `Enquiries`
 
@@ -286,13 +292,19 @@ needed on your end.
   detail pages, basket (drawer + full page), checkout as an enquiry form,
   thank-you screen. Reads Airtable directly with the read-only token.
   Every painting can also be added as a print in a choice of sizes (see
-  §5) alongside, or instead of, the original.
+  §5) alongside, or instead of, the original. Visitors can also heart a
+  painting (no login needed), see a "New" badge on recently added work,
+  and read a short personal story Rose can add per painting.
 - **`dashboard.html`** — Rose's private admin, linked quietly from the
   homepage footer ("Studio") rather than the main nav. Own magic-link
   login (email in, click the link, signed in for 30 days — see §4),
-  stats cards, Paintings tab (drag-to-reorder, inline edit, Cloudinary
-  photo upload, Available/Reserved/Sold status, delete), Enquiries tab
-  (reads what visitors submit, lets Rose mark New/Contacted/Closed).
+  stats cards (now including "Most loved", based on hearts), Paintings
+  tab (drag-to-reorder, inline edit, Cloudinary photo upload,
+  Available/Reserved/Sold status, an optional Story note, delete),
+  Enquiries tab (reads what visitors submit, lets Rose mark
+  New/Contacted/Closed). If she's been away 2+ days, the first thing she
+  sees on her next visit is a "Welcome back" recap — new enquiries,
+  hearts given, and the most-loved painting while she was gone.
 - **`netlify/functions/paintings.js`** and **`enquiries.js`** — hold the
   Airtable write token server-side; the dashboard calls these with a
   signed session token (proving Rose clicked her login link) rather than
@@ -301,6 +313,11 @@ needed on your end.
   link to an allowed address, then exchanges a valid click for a 30-day
   session token. Stateless (no session database) — just an HMAC-signed
   token checked against `AUTH_SECRET`.
+- **`netlify/functions/hearts.js`** — public, no login needed (same trust
+  level as the enquiry form): increments/decrements a painting's `Hearts`
+  count when a visitor taps the heart icon. Best-effort — if the `Hearts`
+  field isn't in Airtable yet, it quietly no-ops rather than breaking
+  anything for the visitor.
 - The original 22 painting photos are still in `images/full` and
   `images/thumb` — useful as a starting point: once Cloudinary is set up,
   you could upload these into it to seed the first batch of `Paintings`
@@ -335,3 +352,17 @@ needed on your end.
 - **Delivery address added to the checkout form**, optional for
   originals but effectively required for prints — prints always get
   posted, so there's now somewhere for the customer to put that.
+- **Hearts are one-per-browser, not one-per-person** — a visitor toggles
+  a heart via their browser's local storage (no login for shop visitors),
+  so clearing site data or switching devices resets it for them. Fine
+  for a lightweight "give it some love" gesture; wasn't worth adding
+  accounts over.
+- **The welcome-back recap is per-device, not per-account** — it compares
+  today's counts to whatever this same browser last recorded, stored in
+  its local storage rather than Airtable. If Rose opens the dashboard
+  from a different device the first time she's back, she just won't see
+  a recap that once (everything else works normally) — simplest option
+  that needed no new Airtable table.
+- **"New" badges use Airtable's built-in created-time**, not a new field
+  — a painting added in roughly the last two weeks gets the badge
+  automatically, no action needed when adding one.

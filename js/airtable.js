@@ -42,7 +42,10 @@
       category: f.Category || "",
       status: f.Status || "Available",
       imageUrl: f["Image URL"] || "",
-      sortOrder: typeof f["Sort Order"] === "number" ? f["Sort Order"] : 0
+      sortOrder: typeof f["Sort Order"] === "number" ? f["Sort Order"] : 0,
+      hearts: typeof f.Hearts === "number" ? f.Hearts : 0,
+      story: f.Story || "",
+      createdAt: record.createdTime || ""
     };
   }
 

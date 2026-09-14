@@ -17,7 +17,10 @@ function normalize(record) {
     category: f.Category || "",
     status: f.Status || "Available",
     imageUrl: f["Image URL"] || "",
-    sortOrder: typeof f["Sort Order"] === "number" ? f["Sort Order"] : 0
+    sortOrder: typeof f["Sort Order"] === "number" ? f["Sort Order"] : 0,
+    hearts: typeof f.Hearts === "number" ? f.Hearts : 0,
+    story: f.Story || "",
+    createdAt: record.createdTime || ""
   };
 }
 
@@ -34,6 +37,7 @@ function toFields(body) {
   if (body.status !== undefined) fields.Status = body.status;
   if (body.imageUrl !== undefined) fields["Image URL"] = body.imageUrl;
   if (body.sortOrder !== undefined) fields["Sort Order"] = Number(body.sortOrder) || 0;
+  if (body.story !== undefined) fields.Story = body.story;
   return fields;
 }
 

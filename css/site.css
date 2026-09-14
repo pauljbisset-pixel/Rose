@@ -93,7 +93,16 @@ header.nav .links a{font-size:11px;letter-spacing:.18em;text-transform:uppercase
 .work-card{display:flex;flex-direction:column;gap:10px}
 .work-figure{position:relative;padding:10px;background:#fff;border:1px solid var(--sand);cursor:pointer;box-shadow:0 1px 3px rgba(21,48,60,.07)}
 .work-figure img{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--sand)}
-.ribbon{position:absolute;top:20px;left:0;padding:5px 12px;background:var(--ink);color:var(--shell);font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+.ribbon{position:absolute;top:20px;left:0;padding:5px 12px;background:var(--ink);color:var(--shell);font-size:10px;letter-spacing:.2em;text-transform:uppercase;z-index:1}
+.heart-btn{
+  position:absolute;top:20px;right:20px;width:34px;height:34px;border:0;border-radius:999px;
+  background:rgba(255,255,255,.88);color:var(--ink-soft);font-size:17px;line-height:1;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,color .15s;
+}
+.heart-btn:hover{transform:scale(1.12)}
+.heart-btn.on{color:var(--sea)}
+.heart-count{font-size:12px;color:var(--muted)}
+.new-badge{display:inline-block;margin-left:2px;padding:2px 9px;border-radius:999px;background:var(--sea);color:var(--shell);font-size:10px;letter-spacing:.12em;text-transform:uppercase;vertical-align:middle}
 .work-title{font-family:var(--display);font-size:20px;line-height:1.2;color:var(--ink)}
 .work-meta{margin:0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .work-price-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
@@ -112,6 +121,9 @@ header.nav .links a{font-size:11px;letter-spacing:.18em;text-transform:uppercase
 .back-link{display:inline-block;margin-bottom:22px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
 .sold-note{margin:0;padding:16px 20px;background:var(--shell-2);border-left:2px solid var(--sea);font-size:14px;color:var(--ink-soft)}
 .print-block{margin:22px 0 0;padding-top:22px;border-top:1px solid var(--line)}
+.story-note{margin:0 0 20px;padding:16px 18px;background:var(--shell-2);border-left:2px solid var(--sea)}
+.story-label{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sea)}
+.story-text{margin:0;font-family:var(--display);font-style:italic;font-size:16px;line-height:1.65;color:var(--ink-soft);white-space:pre-line}
 
 /* ---------- basket / checkout ---------- */
 .commerce-section{max-width:1000px;margin:0 auto;padding:clamp(24px,5vw,52px) var(--pad) clamp(48px,8vw,88px)}
@@ -157,6 +169,12 @@ footer.site{padding:24px var(--pad);border-top:1px solid var(--line);display:fle
 
 /* ---------- dashboard ---------- */
 .dash-header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:26px}
+.recap-banner{position:relative;margin:0 0 26px;padding:26px 30px;background:var(--ink)}
+.recap-lede{margin:0 0 18px;max-width:56ch;font-family:var(--display);font-style:italic;font-size:19px;line-height:1.4;color:var(--shell)}
+.recap-stats{display:flex;gap:32px;flex-wrap:wrap}
+.recap-note{margin:4px 0 0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,242,.7)}
+.recap-dismiss{position:absolute;top:16px;right:18px;border:0;background:none;color:rgba(250,247,242,.7);font-size:22px;line-height:1;cursor:pointer}
+.recap-dismiss:hover{color:var(--shell)}
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:14px;margin-bottom:30px}
 .stat-card{padding:18px 20px;background:var(--shell-2);border-top:2px solid var(--sea)}
 .stat-label{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}

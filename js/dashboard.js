@@ -12,6 +12,8 @@
   const currentUserEmail = document.getElementById("currentUserEmail");
 
   const SESSION_KEY = "rb_session_v1";
+  const DASH_STATE_KEY = "rb_dash_state_v1";
+  const AWAY_THRESHOLD_MS = 1000 * 60 * 60 * 48; // show the recap after 2+ days away
 
   const state = {
     sessionToken: null,
@@ -27,7 +29,8 @@
     dragOver: null,
     savedNote: "Changes here update the shop straight away. Nothing needs code.",
     busy: false,
-    errorMsg: ""
+    errorMsg: "",
+    recap: null
   };
 
   function money(n) {
@@ -60,6 +63,41 @@
     state.sessionToken = null;
     state.userEmail = null;
     try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
+  }
+
+  function loadDashState() {
+    try { return JSON.parse(localStorage.getItem(DASH_STATE_KEY)); } catch (e) { return null; }
+  }
+
+  function saveDashState(s) {
+    try { localStorage.setItem(DASH_STATE_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+  }
+
+  // Compares today's counts against whatever was recorded the last time
+  // this browser opened the dashboard. Only localStorage-backed (no
+  // Airtable schema needed) — if she opens the dashboard from a
+  // different device first, it just skips the recap that once, no harm.
+  function computeRecap() {
+    const prev = loadDashState();
+    const heartsTotal = state.paintings.reduce((n, w) => n + (w.hearts || 0), 0);
+    const enquiriesCount = state.enquiries.length;
+    const now = Date.now();
+    let recap = null;
+    if (prev && prev.lastSeenAt && (now - prev.lastSeenAt) > AWAY_THRESHOLD_MS) {
+      const newEnquiries = Math.max(0, enquiriesCount - (prev.enquiriesCount || 0));
+      const newHearts = Math.max(0, heartsTotal - (prev.heartsTotal || 0));
+      if (newEnquiries > 0 || newHearts > 0) {
+        const mostLoved = state.paintings.slice().sort((a, b) => (b.hearts || 0) - (a.hearts || 0))[0];
+        recap = {
+          days: Math.max(1, Math.round((now - prev.lastSeenAt) / (1000 * 60 * 60 * 24))),
+          newEnquiries,
+          newHearts,
+          mostLoved: (mostLoved && mostLoved.hearts > 0) ? mostLoved : null
+        };
+      }
+    }
+    saveDashState({ lastSeenAt: now, enquiriesCount, heartsTotal });
+    return recap;
   }
 
   async function authFetch(path, options) {
@@ -166,10 +204,12 @@
       renderLoading("Loading your paintings…");
       try {
         await loadPaintings();
+        await loadEnquiries();
       } catch (err) {
         renderLoadError(err.message);
         return;
       }
+      state.recap = computeRecap();
     }
     renderDashboard();
   }
@@ -180,12 +220,41 @@
     const sold = works.filter((w) => w.status === "Sold").length;
     const takings = works.filter((w) => w.status === "Sold").reduce((n, w) => n + w.price, 0);
     const avg = works.length ? Math.round(works.reduce((n, w) => n + w.price, 0) / works.length) : 0;
-    return [
+    const cards = [
       { label: "Available", value: available, note: "listed in the shop" },
       { label: "Sold", value: sold, note: "marked sold to date" },
       { label: "Takings", value: money(takings), note: "from sold paintings" },
       { label: "Average price", value: money(avg), note: "across all originals" }
     ];
+    const mostLoved = works.slice().sort((a, b) => (b.hearts || 0) - (a.hearts || 0))[0];
+    if (mostLoved && mostLoved.hearts > 0) {
+      cards.push({
+        label: "Most loved",
+        value: mostLoved.title,
+        note: `${mostLoved.hearts} heart${mostLoved.hearts === 1 ? "" : "s"} from visitors`
+      });
+    }
+    return cards;
+  }
+
+  function recapBannerHtml(r) {
+    const blocks = [];
+    if (r.newEnquiries) blocks.push({ value: r.newEnquiries, note: `new enquir${r.newEnquiries === 1 ? "y" : "ies"}` });
+    if (r.newHearts) blocks.push({ value: r.newHearts, note: `heart${r.newHearts === 1 ? "" : "s"} given` });
+    if (r.mostLoved) blocks.push({ value: r.mostLoved.title, note: `most loved · ${r.mostLoved.hearts} ♥`, small: true });
+    return `
+      <div class="recap-banner">
+        <button class="recap-dismiss" id="dismissRecap" aria-label="Dismiss">&times;</button>
+        <p class="kicker" style="color:var(--shell);opacity:.85;margin:0 0 6px">Welcome back</p>
+        <p class="recap-lede">You've been away ${r.days} day${r.days === 1 ? "" : "s"} — here's what happened while you were gone.</p>
+        <div class="recap-stats">
+          ${blocks.map((b) => `
+            <div>
+              <p class="stat-value" style="color:var(--shell);${b.small ? "font-size:20px" : ""}">${esc(String(b.value))}</p>
+              <p class="recap-note">${esc(b.note)}</p>
+            </div>`).join("")}
+        </div>
+      </div>`;
   }
 
   function renderDashboard() {
@@ -199,11 +268,13 @@
         <button class="btn" id="newWorkBtn">+ Add a painting</button>
       </div>
 
+      ${state.recap ? recapBannerHtml(state.recap) : ""}
+
       <div class="stats-row">
         ${stats().map((s) => `
           <div class="stat-card">
             <p class="stat-label">${esc(s.label)}</p>
-            <p class="stat-value">${s.value}</p>
+            <p class="stat-value">${esc(String(s.value))}</p>
             <p class="stat-note">${esc(s.note)}</p>
           </div>`).join("")}
       </div>
@@ -216,8 +287,11 @@
       <div id="tabBody"></div>
     `;
 
+    const dismissRecap = document.getElementById("dismissRecap");
+    if (dismissRecap) dismissRecap.addEventListener("click", () => { state.recap = null; renderDashboard(); });
+
     document.getElementById("newWorkBtn").addEventListener("click", () => {
-      state.draft = { id: null, title: "", price: 0, size: "", description: "", category: "", status: "Available", imageUrl: "" };
+      state.draft = { id: null, title: "", price: 0, size: "", description: "", story: "", category: "", status: "Available", imageUrl: "" };
       state.draftIsNew = true;
       state.savedNote = "Drop a photo in, give it a title and a price, then save.";
       state.tab = "works";
@@ -315,6 +389,9 @@
       <label class="form-field" style="margin-bottom:14px">Description
         <textarea id="fDesc" rows="4">${esc(draft.description)}</textarea>
       </label>
+      <label class="form-field" style="margin-bottom:14px">Story <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">optional — a personal note shown on the painting's page</span>
+        <textarea id="fStory" rows="3" placeholder="e.g. Painted after a stormy walk to Instow beach…">${esc(draft.story)}</textarea>
+      </label>
       <div style="margin-bottom:6px">
         <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Status</p>
         <div class="status-buttons">
@@ -380,13 +457,14 @@
     const delBtn = document.getElementById("deleteDraftBtn");
     if (delBtn) delBtn.addEventListener("click", deleteDraft);
 
-    ["fTitle", "fPrice", "fSize", "fDesc"].forEach((id) => {
+    ["fTitle", "fPrice", "fSize", "fDesc", "fStory"].forEach((id) => {
       const el = document.getElementById(id);
       el.addEventListener("input", () => {
         state.draft.title = document.getElementById("fTitle").value;
         state.draft.price = Number(document.getElementById("fPrice").value) || 0;
         state.draft.size = document.getElementById("fSize").value;
         state.draft.description = document.getElementById("fDesc").value;
+        state.draft.story = document.getElementById("fStory").value;
       });
     });
   }

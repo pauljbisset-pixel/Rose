@@ -9,6 +9,8 @@
   const basketToggle = document.getElementById("basketToggle");
   const basketCountEl = document.getElementById("basketCount");
   const BASKET_KEY = "rb_basket_v1";
+  const HEARTS_KEY = "rb_hearts_v1";
+  const NEW_BADGE_DAYS = 14;
 
   const state = {
     paintings: [],
@@ -16,6 +18,7 @@
     error: null,
     filter: "all",
     basket: loadBasket(),
+    hearted: loadHearted(),
     drawerOpen: false,
     lastOrder: null
   };
@@ -42,6 +45,50 @@
     try {
       localStorage.setItem(BASKET_KEY, JSON.stringify(state.basket));
     } catch (e) { /* private browsing / storage disabled — basket just won't persist */ }
+  }
+
+  function loadHearted() {
+    try {
+      const raw = localStorage.getItem(HEARTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveHearted() {
+    try { localStorage.setItem(HEARTS_KEY, JSON.stringify(state.hearted)); } catch (e) { /* ignore */ }
+  }
+
+  function isHearted(id) {
+    return state.hearted.indexOf(id) > -1;
+  }
+
+  function toggleHeart(id) {
+    const w = byId(id);
+    if (!w) return;
+    const already = isHearted(id);
+    if (already) {
+      state.hearted = state.hearted.filter((h) => h !== id);
+      w.hearts = Math.max(0, (w.hearts || 0) - 1);
+    } else {
+      state.hearted = state.hearted.concat([id]);
+      w.hearts = (w.hearts || 0) + 1;
+    }
+    saveHearted();
+    renderScreen();
+    // Best-effort sync — the heart already shows locally either way.
+    fetch("/.netlify/functions/hearts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paintingId: id, delta: already ? -1 : 1 })
+    }).catch((err) => console.warn("Heart sync failed:", err));
+  }
+
+  function isNew(w) {
+    if (!w.createdAt) return false;
+    const days = (Date.now() - new Date(w.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    return days >= 0 && days <= NEW_BADGE_DAYS;
   }
 
   function printSizes() {
@@ -254,15 +301,19 @@
 
   function cardHtml(w) {
     const inBasket = state.basket.some((it) => it.kind === "original" && it.paintingId === w.id);
+    const hearted = isHearted(w.id);
     return `
       <article class="work-card">
         <div class="work-figure" data-open="${esc(w.id)}">
+          ${isNew(w) ? `<span class="ribbon">New</span>` : ""}
           <img src="${esc(RoseAirtable.thumbUrl(w.imageUrl))}" alt="${esc(w.title)}" loading="lazy">
+          <button class="heart-btn ${hearted ? "on" : ""}" data-heart="${esc(w.id)}" aria-label="${hearted ? "Remove heart" : "Give this a heart"}">${hearted ? "♥" : "♡"}</button>
         </div>
         <a href="#/work/${encodeURIComponent(w.id)}" class="work-title" data-open="${esc(w.id)}">${esc(w.title)}</a>
         <p class="work-meta">${esc(w.size)}</p>
         <div class="work-price-row">
           <p class="work-price">${money(w.price)}</p>
+          ${w.hearts ? `<span class="heart-count">${w.hearts} ♥</span>` : ""}
         </div>
         <button class="btn-outline" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>
         <a class="btn-text" style="text-align:center" data-open="${esc(w.id)}">Or order a print →</a>
@@ -282,6 +333,13 @@
         addOriginalToBasket(el.getAttribute("data-add"));
       });
     });
+    document.querySelectorAll("[data-heart]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleHeart(el.getAttribute("data-heart"));
+      });
+    });
   }
 
   function renderWork(id) {
@@ -294,6 +352,7 @@
       return;
     }
     const inBasket = state.basket.some((it) => it.kind === "original" && it.paintingId === w.id);
+    const hearted = isHearted(w.id);
     const sizes = printSizes();
     app.innerHTML = `
       <section class="commerce-section" style="max-width:${1180 - 2 * 40}px">
@@ -303,15 +362,24 @@
             <img src="${esc(RoseAirtable.fullUrl(w.imageUrl))}" alt="${esc(w.title)}">
           </div>
           <div class="detail-info">
-            <p class="kicker">Original · one of a kind</p>
+            <p class="kicker">Original · one of a kind${isNew(w) ? ` <span class="new-badge">New</span>` : ""}</p>
             <h1>${esc(w.title)}</h1>
             <p class="detail-price">${money(w.price)}</p>
+            ${w.story ? `
+            <div class="story-note">
+              <p class="story-label">A note from Rose</p>
+              <p class="story-text">${esc(w.story)}</p>
+            </div>` : ""}
             <p class="detail-desc">${esc(w.description)}</p>
             <dl class="detail-facts">
               <dt>Medium</dt><dd>Oil, wax &amp; foraged seaweed</dd>
               <dt>Size</dt><dd>${esc(w.size)}</dd>
             </dl>
-            <button class="btn" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <button class="btn" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>
+              <button class="btn-outline" id="heartBtn" data-heart="${esc(w.id)}">${hearted ? "♥ Loved" : "♡ Give this a heart"}</button>
+              ${w.hearts ? `<span class="heart-count">${w.hearts} ${w.hearts === 1 ? "heart" : "hearts"}</span>` : ""}
+            </div>
 
             ${sizes.length ? `
             <div class="print-block">
@@ -333,6 +401,7 @@
     document.querySelectorAll("[data-add]").forEach((el) => {
       el.addEventListener("click", () => addOriginalToBasket(el.getAttribute("data-add")));
     });
+    document.getElementById("heartBtn").addEventListener("click", () => toggleHeart(w.id));
 
     const printSizeSel = document.getElementById("printSize");
     const addPrintBtn = document.getElementById("addPrintBtn");
