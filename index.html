@@ -330,7 +330,7 @@ const MEDIUM = 'Oil, wax & mixed media';
 const grid = document.getElementById('grid');
 let WORKS = [];
 
-RoseAirtable.fetchAvailablePaintings().then(paintings => {
+RoseAirtable.fetchPaintings().then(paintings => {
   WORKS = paintings;
   if (!WORKS.length) {
     grid.innerHTML = '<p style="color:var(--muted)">New paintings are on their way — in the meantime, see the <a href="shop.html">shop</a>.</p>';

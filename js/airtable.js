@@ -64,9 +64,14 @@
     return cloudinaryVariant(url, "w_1600,c_limit,q_auto,f_auto");
   }
 
-  async function fetchAvailablePaintings() {
+  // Fetches every painting regardless of status. Sold/Reserved originals
+  // stay in the shop rather than vanishing — a print of a painting is
+  // still buyable long after the original itself is gone, so hiding the
+  // whole card on sale would hide that option too. The shop UI marks
+  // sold/reserved status with a badge and swaps the "Add to basket"
+  // button for the original accordingly.
+  async function fetchPaintings() {
     const records = await fetchAllRecords(cfg.paintingsTable, {
-      filterByFormula: "{Status} = 'Available'",
       "sort[0][field]": "Sort Order",
       "sort[0][direction]": "asc"
     });
@@ -74,7 +79,7 @@
   }
 
   window.RoseAirtable = {
-    fetchAvailablePaintings,
+    fetchPaintings,
     thumbUrl,
     fullUrl
   };

@@ -366,3 +366,13 @@ needed on your end.
 - **"New" badges use Airtable's built-in created-time**, not a new field
   — a painting added in roughly the last two weeks gets the badge
   automatically, no action needed when adding one.
+- **Sold/Reserved paintings stay in the shop instead of disappearing.**
+  Originally the shop only fetched `Status = Available` records, so
+  marking something Sold silently removed it — including the ability to
+  buy a print of it, which has nothing to do with whether the one-off
+  original is still around. Now the shop fetches every painting and
+  shows a "Sold"/"Reserved" badge instead, swapping the "Add to basket"
+  button for a note when the original itself isn't buyable — prints stay
+  orderable regardless of status. The homepage portfolio grid picks up
+  the same fix, so a sold painting no longer vanishes from Rose's "about"
+  page either.

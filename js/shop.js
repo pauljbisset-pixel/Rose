@@ -280,7 +280,7 @@
       <div class="wrap">
         <div class="filters-row">
           <div>
-            <p class="kicker">Available Work</p>
+            <p class="kicker">The Collection</p>
             <h2 style="margin:0">Originals</h2>
           </div>
           ${cats.length ? `<div class="filters" id="filters">
@@ -288,9 +288,9 @@
             ${cats.map((c) => `<button class="chip ${state.filter === c ? "on" : ""}" data-filter="${esc(c)}">${esc(c)}</button>`).join("")}
           </div>` : ""}
         </div>
-        <p class="filters-note">Every painting is an original, signed and ready to hang. Enquire below to arrange payment by bank transfer and delivery or collection from Instow. Prefer a print? Every painting is also available unframed, printed on fine art paper and shipped rolled in a tube — open a painting to choose a size.</p>
+        <p class="filters-note">Every painting is an original, signed and ready to hang — enquire below to arrange payment and delivery or collection from Instow. Sold and reserved pieces stay on display too, since every painting is also available as an unframed print in a choice of sizes, whether the original is still available or not — open a painting to choose a size.</p>
         ${shown.length ? `<div class="shop-grid">${shown.map(cardHtml).join("")}</div>` :
-          `<div class="basket-empty" style="margin:32px 0"><p>No paintings available in this category right now.</p></div>`}
+          `<div class="basket-empty" style="margin:32px 0"><p>No paintings in this category right now.</p></div>`}
       </div>`;
 
     document.querySelectorAll("[data-filter]").forEach((btn) => {
@@ -302,10 +302,14 @@
   function cardHtml(w) {
     const inBasket = state.basket.some((it) => it.kind === "original" && it.paintingId === w.id);
     const hearted = isHearted(w.id);
+    const canBuyOriginal = w.status === "Available";
+    const ribbon = w.status === "Sold" ? `<span class="ribbon">Sold</span>`
+      : w.status === "Reserved" ? `<span class="ribbon ribbon-reserved">Reserved</span>`
+      : isNew(w) ? `<span class="ribbon">New</span>` : "";
     return `
       <article class="work-card">
         <div class="work-figure" data-open="${esc(w.id)}">
-          ${isNew(w) ? `<span class="ribbon">New</span>` : ""}
+          ${ribbon}
           <img src="${esc(RoseAirtable.thumbUrl(w.imageUrl))}" alt="${esc(w.title)}" loading="lazy">
           <button class="heart-btn ${hearted ? "on" : ""}" data-heart="${esc(w.id)}" aria-label="${hearted ? "Remove heart" : "Give this a heart"}">${hearted ? "♥" : "♡"}</button>
         </div>
@@ -315,7 +319,9 @@
           <p class="work-price">${money(w.price)}</p>
           ${w.hearts ? `<span class="heart-count">${w.hearts} ♥</span>` : ""}
         </div>
-        <button class="btn-outline" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>
+        ${canBuyOriginal
+          ? `<button class="btn-outline" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>`
+          : `<p class="work-status-note">${w.status === "Sold" ? "Original sold" : "Original reserved"} — prints still available</p>`}
         <a class="btn-text" style="text-align:center" data-open="${esc(w.id)}">Or order a print →</a>
       </article>`;
   }
@@ -353,6 +359,10 @@
     }
     const inBasket = state.basket.some((it) => it.kind === "original" && it.paintingId === w.id);
     const hearted = isHearted(w.id);
+    const canBuyOriginal = w.status === "Available";
+    const badge = w.status === "Sold" ? `<span class="new-badge badge-sold">Sold</span>`
+      : w.status === "Reserved" ? `<span class="new-badge badge-reserved">Reserved</span>`
+      : isNew(w) ? `<span class="new-badge">New</span>` : "";
     const sizes = printSizes();
     app.innerHTML = `
       <section class="commerce-section" style="max-width:${1180 - 2 * 40}px">
@@ -362,7 +372,7 @@
             <img src="${esc(RoseAirtable.fullUrl(w.imageUrl))}" alt="${esc(w.title)}">
           </div>
           <div class="detail-info">
-            <p class="kicker">Original · one of a kind${isNew(w) ? ` <span class="new-badge">New</span>` : ""}</p>
+            <p class="kicker">Original · one of a kind${badge ? ` ${badge}` : ""}</p>
             <h1>${esc(w.title)}</h1>
             <p class="detail-price">${money(w.price)}</p>
             ${w.story ? `
@@ -376,7 +386,9 @@
               <dt>Size</dt><dd>${esc(w.size)}</dd>
             </dl>
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-              <button class="btn" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>
+              ${canBuyOriginal
+                ? `<button class="btn" data-add="${esc(w.id)}">${inBasket ? "In your basket" : "Add to basket"}</button>`
+                : `<p class="work-status-note" style="margin:0">${w.status === "Sold" ? "This original has sold" : "This original is reserved"} — a print is still available below.</p>`}
               <button class="btn-outline" id="heartBtn" data-heart="${esc(w.id)}">${hearted ? "♥ Loved" : "♡ Give this a heart"}</button>
               ${w.hearts ? `<span class="heart-count">${w.hearts} ${w.hearts === 1 ? "heart" : "hearts"}</span>` : ""}
             </div>
@@ -624,7 +636,7 @@
   window.addEventListener("hashchange", renderScreen);
 
   renderAll();
-  RoseAirtable.fetchAvailablePaintings()
+  RoseAirtable.fetchPaintings()
     .then((paintings) => { state.paintings = paintings; state.loaded = true; renderAll(); })
     .catch((err) => { state.error = err.message; renderAll(); });
 })();
