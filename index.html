@@ -223,17 +223,17 @@
   .socials a{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .25s}
   .socials a:hover{color:var(--sea)}
 
-  /* ---------- lessons ---------- */
-  .section-hero{position:relative;overflow:hidden;background:var(--ink)}
-  .section-hero img{width:100%;height:clamp(220px,38vh,380px);object-fit:cover;opacity:.92}
-  .section-hero .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,26,33,.78),rgba(10,26,33,.15))}
-  .section-hero .inner{position:absolute;inset:auto 0 0 0;padding:clamp(1.4rem,4vw,2.6rem) var(--pad);max-width:var(--maxw);margin:0 auto;color:#fff}
-  .section-hero .inner .kicker{color:#fff;opacity:.85;margin:0 0 .6rem}
-  .section-hero .inner h2{color:#fff;margin:0}
+  /* ---------- side-by-side photo layout (lessons + commissions) ---------- */
+  .side-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,5vw,4rem);align-items:start}
+  @media(max-width:860px){.side-grid{grid-template-columns:1fr}}
+  .side-photo{margin:0}
+  .side-photo img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:2px;box-shadow:0 8px 24px rgba(21,48,60,.14)}
+  .side-grid .contact-form{margin:0;max-width:480px}
 
-  .lessons{background:var(--shell-2);text-align:center;padding-top:0}
-  .lessons p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2rem}
-  .lesson-dates{display:flex;flex-wrap:wrap;justify-content:center;gap:.9rem;margin:0 0 2.4rem}
+  /* ---------- lessons ---------- */
+  .lessons{background:var(--shell-2)}
+  .lessons p{color:var(--ink-soft);max-width:52ch;margin:0 0 2rem}
+  .lesson-dates{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:.9rem;margin:0 0 2.4rem}
   .date-card{padding:.85rem 1.2rem;border:1px solid var(--sand);border-radius:10px;font-size:.82rem;color:var(--ink-soft);background:#fff;max-width:260px;text-align:left}
   .date-card .when{margin:0;font-family:var(--display);font-size:1rem;color:var(--ink)}
   .date-card .spots{margin:.2rem 0 0}
@@ -241,9 +241,8 @@
   .date-card .notes{margin:.4rem 0 0;padding-top:.4rem;border-top:1px solid var(--shell-2);font-size:.78rem;color:var(--muted);line-height:1.5}
 
   /* ---------- commissions ---------- */
-  .commissions{text-align:center;padding-top:0}
-  .commissions p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2.4rem}
-  .steps{list-style:none;margin:0 0 2.8rem;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:1.6rem 2.6rem;max-width:760px;margin-left:auto;margin-right:auto}
+  .commissions p{color:var(--ink-soft);max-width:52ch;margin:0 0 2.4rem}
+  .steps{list-style:none;margin:0 0 2.8rem;padding:0;display:flex;flex-wrap:wrap;justify-content:flex-start;gap:1.6rem 2.6rem}
   .steps li{display:flex;align-items:center;gap:.7rem;font-size:.85rem;color:var(--ink-soft);max-width:220px;text-align:left}
   .steps span{
     display:flex;align-items:center;justify-content:center;flex:none;
@@ -322,15 +321,13 @@
 
 <!-- ================= LESSONS ================= -->
 <section class="lessons" id="lessons">
-  <div class="section-hero">
-    <img src="images/Lessons.jpeg" alt="Rose teaching a painting lesson in her studio, overlooking the Instow estuary">
-    <div class="overlay"></div>
-    <div class="inner">
-      <p class="kicker">Art Lessons</p>
-      <h2>Paint with Rose</h2>
-    </div>
-  </div>
-  <div class="wrap reveal" style="padding-top:clamp(2.4rem,6vw,4.5rem)">
+  <div class="wrap reveal side-grid">
+    <figure class="side-photo">
+      <img src="images/Lessons.jpeg" alt="Rose teaching a painting lesson in her studio, overlooking the Instow estuary">
+    </figure>
+    <div>
+    <p class="kicker">Art Lessons</p>
+    <h2>Paint with Rose</h2>
     <p>A relaxed 90-minute session in the studio, learning her layered oil-and-wax technique — £45 per person, all materials included.</p>
     <div class="lesson-dates" id="lessonDates"></div>
     <form class="contact-form" id="lessonForm" novalidate>
@@ -354,20 +351,16 @@
       <button type="submit" class="btn" id="lessonSubmit">Send booking enquiry</button>
       <p class="contact-status" id="lessonStatus"></p>
     </form>
+    </div>
   </div>
 </section>
 
 <!-- ================= COMMISSIONS ================= -->
 <section class="commissions" id="commissions">
-  <div class="section-hero">
-    <img src="images/Commissions.jpeg" alt="Rose painting a commissioned piece from reference photos in her studio">
-    <div class="overlay"></div>
-    <div class="inner">
-      <p class="kicker">Commissions</p>
-      <h2>A painting made for your space</h2>
-    </div>
-  </div>
-  <div class="wrap reveal" style="padding-top:clamp(2.4rem,6vw,4.5rem)">
+  <div class="wrap reveal side-grid">
+    <div>
+    <p class="kicker">Commissions</p>
+    <h2>A painting made for your space</h2>
     <p>Rose takes on a limited number of commissions — tell her about the space, the colours, the feeling you're after, and she'll reply with ideas, a price, and a rough timeline.</p>
     <ul class="steps">
       <li><span>1</span>Tell her what you have in mind below</li>
@@ -400,6 +393,10 @@
       <button type="submit" class="btn" id="commissionSubmit">Send commission enquiry</button>
       <p class="contact-status" id="commissionStatus"></p>
     </form>
+    </div>
+    <figure class="side-photo">
+      <img src="images/Commissions.jpeg" alt="Rose painting a commissioned piece from reference photos in her studio">
+    </figure>
   </div>
 </section>
 
