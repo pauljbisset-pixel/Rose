@@ -85,7 +85,13 @@ header.nav .links a{font-size:11px;letter-spacing:.18em;text-transform:uppercase
 
 /* ---------- filters ---------- */
 .filters-row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;padding:clamp(28px,5vw,56px) 0 8px}
+.filters-controls{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
 .filters{display:flex;flex-wrap:wrap;gap:8px}
+.sort-field{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.sort-field select{
+  min-height:38px;padding:0 12px;border:1px solid rgba(21,48,60,.2);border-radius:999px;background:#fff;
+  font-size:12px;letter-spacing:0;text-transform:none;color:var(--ink);font-family:var(--body);
+}
 .filters-note{margin:16px 0 0;max-width:52ch;color:var(--muted);font-size:14px;line-height:1.7}
 
 /* ---------- gallery grid ---------- */

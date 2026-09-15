@@ -12,11 +12,20 @@
   const HEARTS_KEY = "rb_hearts_v1";
   const NEW_BADGE_DAYS = 14;
 
+  const SORT_OPTIONS = [
+    { value: "featured", label: "Featured" },
+    { value: "newest", label: "Newest" },
+    { value: "loved", label: "Most loved" },
+    { value: "price-asc", label: "Price: low to high" },
+    { value: "price-desc", label: "Price: high to low" }
+  ];
+
   const state = {
     paintings: [],
     loaded: false,
     error: null,
     filter: "all",
+    sort: "featured",
     basket: loadBasket(),
     hearted: loadHearted(),
     drawerOpen: false,
@@ -83,6 +92,15 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paintingId: id, delta: already ? -1 : 1 })
     }).catch((err) => console.warn("Heart sync failed:", err));
+  }
+
+  function sortPaintings(list, sort) {
+    const arr = list.slice();
+    if (sort === "newest") return arr.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (sort === "loved") return arr.sort((a, b) => (b.hearts || 0) - (a.hearts || 0));
+    if (sort === "price-asc") return arr.sort((a, b) => a.price - b.price);
+    if (sort === "price-desc") return arr.sort((a, b) => b.price - a.price);
+    return arr; // "featured" — already in Rose's chosen Sort Order from fetchPaintings()
   }
 
   function isNew(w) {
@@ -266,7 +284,8 @@
 
   function renderShop() {
     const cats = categories();
-    const shown = state.paintings.filter((w) => state.filter === "all" || w.category === state.filter);
+    const filtered = state.paintings.filter((w) => state.filter === "all" || w.category === state.filter);
+    const shown = sortPaintings(filtered, state.sort);
     app.innerHTML = `
       <section class="shop-hero">
         <img src="images/hero.jpg" alt="Painting by Rose Budge">
@@ -283,10 +302,17 @@
             <p class="kicker">The Collection</p>
             <h2 style="margin:0">Originals</h2>
           </div>
-          ${cats.length ? `<div class="filters" id="filters">
-            <button class="chip ${state.filter === "all" ? "on" : ""}" data-filter="all">All ${state.paintings.length}</button>
-            ${cats.map((c) => `<button class="chip ${state.filter === c ? "on" : ""}" data-filter="${esc(c)}">${esc(c)}</button>`).join("")}
-          </div>` : ""}
+          <div class="filters-controls">
+            ${cats.length ? `<div class="filters" id="filters">
+              <button class="chip ${state.filter === "all" ? "on" : ""}" data-filter="all">All ${state.paintings.length}</button>
+              ${cats.map((c) => `<button class="chip ${state.filter === c ? "on" : ""}" data-filter="${esc(c)}">${esc(c)}</button>`).join("")}
+            </div>` : ""}
+            <label class="sort-field">Sort
+              <select id="sortSelect">
+                ${SORT_OPTIONS.map((s) => `<option value="${s.value}" ${state.sort === s.value ? "selected" : ""}>${esc(s.label)}</option>`).join("")}
+              </select>
+            </label>
+          </div>
         </div>
         <p class="filters-note">Every painting is an original, signed and ready to hang — enquire below to arrange payment and delivery or collection from Instow. Sold and reserved pieces stay on display too, since every painting is also available as an unframed print in a choice of sizes, whether the original is still available or not — open a painting to choose a size.</p>
         ${shown.length ? `<div class="shop-grid">${shown.map(cardHtml).join("")}</div>` :
@@ -296,6 +322,7 @@
     document.querySelectorAll("[data-filter]").forEach((btn) => {
       btn.addEventListener("click", () => { state.filter = btn.getAttribute("data-filter"); renderScreen(); });
     });
+    document.getElementById("sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; renderScreen(); });
     bindCardActions();
   }
 

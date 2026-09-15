@@ -479,3 +479,9 @@ needed on your end.
   enquire about the last spot at the same time; whoever she confirms
   first gets it. Same category of risk as everything else on this
   site being manually confirmed — not a new one introduced by lessons.
+- **Shop sort control (Featured/Newest/Most loved/Price).** Sits next
+  to the category filter chips. "Featured" is the default and is just
+  Rose's own drag-to-reorder `Sort Order` from the dashboard — nothing
+  changes for her, sorting is purely a visitor-side view on top of
+  data that already exists (hearts, created-time, price), no new
+  Airtable field needed.
