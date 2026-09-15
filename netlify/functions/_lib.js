@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const AIRTABLE_ROOT = "https://api.airtable.com/v0";
 const PAINTINGS_TABLE = "Paintings";
 const ENQUIRIES_TABLE = "Enquiries";
+const LESSONS_TABLE = "Lessons";
 
 function baseId() {
   const id = process.env.AIRTABLE_BASE_ID;
@@ -138,6 +139,7 @@ function errorResponse(err) {
 module.exports = {
   PAINTINGS_TABLE,
   ENQUIRIES_TABLE,
+  LESSONS_TABLE,
   airtableRequest,
   airtableListAll,
   allowedEmails,

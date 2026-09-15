@@ -223,6 +223,13 @@
   .socials a{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .25s}
   .socials a:hover{color:var(--sea)}
 
+  /* ---------- lessons ---------- */
+  .lessons{background:var(--shell-2);text-align:center}
+  .lessons p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2rem}
+  .lesson-dates{display:flex;flex-wrap:wrap;justify-content:center;gap:.7rem;margin:0 0 2.4rem}
+  .date-chip{padding:.55rem 1.1rem;border:1px solid var(--sand);border-radius:999px;font-size:.82rem;color:var(--ink-soft);background:#fff}
+  .date-chip.low{border-color:var(--sea);color:var(--sea)}
+
   /* ---------- commissions ---------- */
   .commissions{text-align:center}
   .commissions p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2.4rem}
@@ -244,6 +251,7 @@
   <nav>
     <a href="#about">About</a>
     <a href="shop.html">Shop</a>
+    <a href="#lessons">Lessons</a>
     <a href="#commissions">Commissions</a>
     <a href="#contact">Contact</a>
   </nav>
@@ -299,6 +307,37 @@
       <p>Oils layered with wax and foraged seaweed. Click any painting to view it larger.</p>
     </div>
     <div class="grid-art" id="grid"></div>
+  </div>
+</section>
+
+<!-- ================= LESSONS ================= -->
+<section class="lessons" id="lessons">
+  <div class="wrap reveal">
+    <p class="kicker">Art Lessons</p>
+    <h2>Paint with Rose</h2>
+    <p>A relaxed 90-minute session in the studio, learning her layered oil-and-wax technique — £45 per person, all materials included.</p>
+    <div class="lesson-dates" id="lessonDates"></div>
+    <form class="contact-form" id="lessonForm" novalidate>
+      <label class="contact-field">Name
+        <input type="text" name="name" placeholder="Your name" required>
+      </label>
+      <div class="contact-row2">
+        <label class="contact-field">Email
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </label>
+        <label class="contact-field">Phone <span style="text-transform:none;letter-spacing:0;font-size:.8rem">optional</span>
+          <input type="tel" name="phone" placeholder="07…">
+        </label>
+      </div>
+      <label class="contact-field" id="lessonDateField">Which date
+        <select name="date" id="lessonDateSelect"></select>
+      </label>
+      <label class="contact-field">Message <span style="text-transform:none;letter-spacing:0;font-size:.8rem">optional</span>
+        <textarea name="message" rows="4" placeholder="How many people, any experience, anything else to know"></textarea>
+      </label>
+      <button type="submit" class="btn" id="lessonSubmit">Send booking enquiry</button>
+      <p class="contact-status" id="lessonStatus"></p>
+    </form>
   </div>
 </section>
 
@@ -471,12 +510,12 @@ addEventListener('scroll',()=>nav.classList.toggle('solid', scrollY > innerHeigh
 const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){e.target.classList.add('in'); io.unobserve(e.target);} }),{threshold:.15});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-/* contact + commission forms — send via EmailJS, no mailto link and no
-   phone number sitting in the page for scrapers to harvest (same shared
-   template the shop's enquiry form and the dashboard's login email
-   already use). Also best-effort logged to Airtable, same as the shop's
-   enquiry form, so they show up on Rose's dashboard even if an email
-   goes astray (as one once did, into spam). */
+/* contact + commission + lesson forms — send via EmailJS, no mailto
+   link and no phone number sitting in the page for scrapers to harvest
+   (same shared template the shop's enquiry form and the dashboard's
+   login email already use). Also best-effort logged to Airtable, same
+   as the shop's enquiry form, so they show up on Rose's dashboard even
+   if an email goes astray (as one once did, into spam). */
 if (CFG.emailjs.publicKey && window.emailjs) {
   emailjs.init({ publicKey: CFG.emailjs.publicKey });
 }
@@ -595,6 +634,105 @@ commissionForm.addEventListener('submit', async (e)=>{
     commissionStatus.innerHTML=`Something went wrong sending that — please try again, or email <a href="mailto:${CFG.contact.email}">${CFG.contact.email}</a> directly.`;
     commissionSubmit.disabled=false;
     commissionSubmit.textContent='Send commission enquiry';
+  }
+});
+
+/* lesson booking — lists upcoming open sessions (from Airtable) with
+   spots left, and sends a booking enquiry for the chosen date through
+   the same shared template. Booking never auto-confirms a spot — Rose
+   confirms and updates "Booked" in her dashboard once payment's sorted,
+   same as everything else on this site. */
+function formatLessonDate(iso){
+  const d=new Date(iso);
+  const datePart=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  const timePart=d.toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit'});
+  return `${datePart}, ${timePart}`;
+}
+const lessonDates=document.getElementById('lessonDates');
+const lessonForm=document.getElementById('lessonForm');
+const lessonDateField=document.getElementById('lessonDateField');
+const lessonDateSelect=document.getElementById('lessonDateSelect');
+const lessonStatus=document.getElementById('lessonStatus');
+const lessonSubmit=document.getElementById('lessonSubmit');
+let OPEN_LESSONS=[];
+
+function renderLessonDates(){
+  if(!OPEN_LESSONS.length){
+    lessonDates.innerHTML='<p style="color:var(--muted);font-family:var(--display);font-style:italic;font-size:1.1rem;max-width:44ch;margin:0 auto 2.4rem">No sessions scheduled right now — send a message below and Rose will let you know when the next one\'s on.</p>';
+    lessonDateField.style.display='none';
+    return;
+  }
+  lessonDates.innerHTML=OPEN_LESSONS.map(l=>{
+    const left=l.capacity-l.booked;
+    return `<span class="date-chip ${left<=2?'low':''}">${formatLessonDate(l.date)} · ${left} spot${left===1?'':'s'} left</span>`;
+  }).join('');
+  lessonDateSelect.innerHTML=OPEN_LESSONS.map(l=>{
+    const left=l.capacity-l.booked;
+    return `<option value="${l.id}">${formatLessonDate(l.date)} — ${left} spot${left===1?'':'s'} left</option>`;
+  }).join('');
+}
+RoseAirtable.fetchLessons().then(lessons=>{
+  const now=new Date();
+  OPEN_LESSONS=lessons.filter(l=>l.status==='Open' && new Date(l.date)>=now && l.booked<l.capacity);
+  renderLessonDates();
+}).catch(err=>{
+  console.warn('Lessons failed to load:', err);
+  lessonDates.innerHTML='<p style="color:var(--muted)">Session dates couldn\'t be loaded right now — message Rose below and she\'ll let you know what\'s on.</p>';
+  lessonDateField.style.display='none';
+});
+
+lessonForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const name=lessonForm.name.value.trim();
+  const email=lessonForm.email.value.trim();
+  const phone=lessonForm.phone.value.trim();
+  const message=lessonForm.message.value.trim();
+  const selected=OPEN_LESSONS.find(l=>l.id===lessonForm.date.value);
+  if(!name || !email){
+    lessonStatus.className='contact-status err';
+    lessonStatus.textContent='Please add your name and email.';
+    return;
+  }
+  if(OPEN_LESSONS.length && !selected){
+    lessonStatus.className='contact-status err';
+    lessonStatus.textContent='Please choose a date.';
+    return;
+  }
+  lessonSubmit.disabled=true;
+  lessonSubmit.textContent='Sending…';
+  lessonStatus.className='contact-status';
+  lessonStatus.textContent='';
+  const sessionLine=selected ? formatLessonDate(selected.date) : 'No date selected — open to any upcoming session';
+  try{
+    if(!window.emailjs || CFG.emailjs.templateId.indexOf('TODO_')===0){
+      throw new Error("Email isn't configured yet");
+    }
+    await emailjs.send(CFG.emailjs.serviceId, CFG.emailjs.templateId, {
+      email_kind: 'New Lesson Booking Enquiry',
+      list_label: 'Session',
+      highlight_label: selected ? 'Price' : '',
+      total: selected ? ('£'+selected.price+' per person') : '',
+      footer_label: 'Submitted',
+      action_html: '',
+      to_email: CFG.contact.email,
+      from_name: name,
+      from_email: email,
+      from_phone: phone || '—',
+      message: message || '—',
+      items: sessionLine,
+      submitted_at: new Date().toLocaleString('en-GB')
+    });
+    logEnquiry({ name, email, phone, message: message || '—', items: sessionLine, total: selected ? selected.price : 0 });
+    lessonForm.reset();
+    lessonStatus.className='contact-status ok';
+    lessonStatus.textContent="Thanks — Rose will confirm your spot soon.";
+    lessonSubmit.textContent='Sent';
+  }catch(err){
+    console.warn('Lesson booking send failed:', err);
+    lessonStatus.className='contact-status err';
+    lessonStatus.innerHTML=`Something went wrong sending that — please try again, or email <a href="mailto:${CFG.contact.email}">${CFG.contact.email}</a> directly.`;
+    lessonSubmit.disabled=false;
+    lessonSubmit.textContent='Send booking enquiry';
   }
 });
 

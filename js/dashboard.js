@@ -22,9 +22,13 @@
     paintingsLoaded: false,
     enquiries: [],
     enquiriesLoaded: false,
+    lessons: [],
+    lessonsLoaded: false,
     tab: "works",
     draft: null,
     draftIsNew: false,
+    lessonDraft: null,
+    lessonDraftIsNew: false,
     dragFrom: null,
     dragOver: null,
     savedNote: "Changes here update the shop straight away. Nothing needs code.",
@@ -41,6 +45,26 @@
     return String(str || "").replace(/[&<>"']/g, (c) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
+  }
+
+  function formatLessonDateTime(iso) {
+    if (!iso) return "No date set";
+    const d = new Date(iso);
+    const datePart = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    const timePart = d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" });
+    return `${datePart}, ${timePart}`;
+  }
+
+  function toDatetimeLocal(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function fromDatetimeLocal(value) {
+    if (!value) return "";
+    return new Date(value).toISOString();
   }
 
   function saveSession(sessionToken, email) {
@@ -128,6 +152,12 @@
     const data = await authFetch("/.netlify/functions/enquiries", { method: "GET" });
     state.enquiries = data.records;
     state.enquiriesLoaded = true;
+  }
+
+  async function loadLessons() {
+    const data = await authFetch("/.netlify/functions/lessons", { method: "GET" });
+    state.lessons = data.records;
+    state.lessonsLoaded = true;
   }
 
   /* ---------------- auth screens ---------------- */
@@ -265,7 +295,7 @@
           <p class="kicker">Studio</p>
           <h1>Rose's dashboard</h1>
         </div>
-        <button class="btn" id="newWorkBtn">+ Add a painting</button>
+        <button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : "Add a painting"}</button>
       </div>
 
       ${state.recap ? recapBannerHtml(state.recap) : ""}
@@ -281,6 +311,7 @@
 
       <div class="tabs">
         <button class="tab-btn ${state.tab === "works" ? "on" : ""}" id="tabWorks">Paintings</button>
+        <button class="tab-btn ${state.tab === "lessons" ? "on" : ""}" id="tabLessons">Lessons</button>
         <button class="tab-btn ${state.tab === "enquiries" ? "on" : ""}" id="tabEnquiries">Enquiries</button>
       </div>
 
@@ -290,14 +321,30 @@
     const dismissRecap = document.getElementById("dismissRecap");
     if (dismissRecap) dismissRecap.addEventListener("click", () => { state.recap = null; renderDashboard(); });
 
-    document.getElementById("newWorkBtn").addEventListener("click", () => {
-      state.draft = { id: null, title: "", price: 0, size: "", description: "", story: "", category: "", status: "Available", imageUrl: "" };
-      state.draftIsNew = true;
-      state.savedNote = "Drop a photo in, give it a title and a price, then save.";
-      state.tab = "works";
+    document.getElementById("newItemBtn").addEventListener("click", () => {
+      if (state.tab === "lessons") {
+        state.lessonDraft = { id: null, date: "", price: 45, capacity: 6, booked: 0, status: "Open", location: "", notes: "" };
+        state.lessonDraftIsNew = true;
+        state.savedNote = "Set a date and capacity, then save.";
+      } else {
+        state.draft = { id: null, title: "", price: 0, size: "", description: "", story: "", category: "", status: "Available", imageUrl: "" };
+        state.draftIsNew = true;
+        state.savedNote = "Drop a photo in, give it a title and a price, then save.";
+        state.tab = "works";
+      }
       renderDashboard();
     });
     document.getElementById("tabWorks").addEventListener("click", () => { state.tab = "works"; renderDashboard(); });
+    document.getElementById("tabLessons").addEventListener("click", async () => {
+      state.tab = "lessons";
+      renderDashboard();
+      if (!state.lessonsLoaded) {
+        const body = document.getElementById("tabBody");
+        body.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--muted)">Loading lessons…</div>`;
+        try { await loadLessons(); } catch (err) { body.innerHTML = `<p class="form-error">${esc(err.message)}</p>`; return; }
+        if (state.tab === "lessons") renderTabBody();
+      }
+    });
     document.getElementById("tabEnquiries").addEventListener("click", async () => {
       state.tab = "enquiries";
       renderDashboard();
@@ -318,6 +365,9 @@
     if (state.tab === "works") {
       body.innerHTML = worksTabHtml();
       bindWorksTab();
+    } else if (state.tab === "lessons") {
+      body.innerHTML = lessonsTabHtml();
+      bindLessonsTab();
     } else {
       body.innerHTML = enquiriesTabHtml();
       bindEnquiriesTab();
@@ -567,6 +617,172 @@
     });
   }
 
+  /* ---------------- Lessons tab ---------------- */
+
+  function lessonsTabHtml() {
+    const draft = state.lessonDraft;
+    return `
+      <div class="dash-grid">
+        <div>
+          <p class="row-hint">Sessions are listed soonest first. The shop only shows Open, upcoming sessions with spots left — a session fills itself in automatically once Booked reaches Capacity.</p>
+          <div class="rows" id="lessonRows">
+            ${state.lessons.length ? state.lessons.map(lessonRowHtml).join("") : `<p style="color:var(--muted);font-size:14px">No lessons yet — add your first date.</p>`}
+          </div>
+        </div>
+        <div class="edit-card">
+          ${draft ? lessonEditFormHtml(draft) : `<p style="color:var(--muted);font-size:14px">Select a lesson to edit, or add a new date.</p>`}
+        </div>
+      </div>`;
+  }
+
+  function lessonRowHtml(l) {
+    const full = l.capacity > 0 && l.booked >= l.capacity;
+    const pillClass = l.status === "Cancelled" ? "pill-sold" : full ? "pill-reserved" : "pill-available";
+    const pillLabel = l.status === "Cancelled" ? "Cancelled" : full ? "Full" : "Open";
+    const editing = state.lessonDraft && state.lessonDraft.id === l.id;
+    return `
+      <div class="admin-row ${editing ? "editing" : ""}">
+        <div class="info">
+          <p class="t">${esc(formatLessonDateTime(l.date))}</p>
+          <p class="m">${money(l.price)} · ${l.booked}/${l.capacity} booked${l.location ? " · " + esc(l.location) : ""}</p>
+        </div>
+        <span class="pill ${pillClass}">${esc(pillLabel)}</span>
+        <button class="btn-outline" data-edit-lesson="${esc(l.id)}">Edit</button>
+      </div>`;
+  }
+
+  function lessonEditFormHtml(draft) {
+    return `
+      <p class="kicker">${state.lessonDraftIsNew ? "Lesson details" : "Editing lesson"}</p>
+      <label class="form-field" style="margin-bottom:12px">Date &amp; time
+        <input type="datetime-local" id="lDate" value="${toDatetimeLocal(draft.date)}">
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">
+        <label class="form-field">Price per person (£)
+          <input type="number" id="lPrice" value="${draft.price}">
+        </label>
+        <label class="form-field">Capacity
+          <input type="number" id="lCapacity" value="${draft.capacity}">
+        </label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">
+        <label class="form-field">Booked so far <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">update as you confirm bookings</span>
+          <input type="number" id="lBooked" value="${draft.booked}">
+        </label>
+        <label class="form-field">Location <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">optional</span>
+          <input type="text" id="lLocation" value="${esc(draft.location)}" placeholder="Studio, Instow">
+        </label>
+      </div>
+      <label class="form-field" style="margin-bottom:14px">Notes <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">optional — anything specific to this date</span>
+        <textarea id="lNotes" rows="3">${esc(draft.notes)}</textarea>
+      </label>
+      <div style="margin-bottom:6px">
+        <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Status</p>
+        <div class="status-buttons">
+          <button class="chip ${draft.status === "Open" ? "on" : ""}" data-lesson-status="Open">Open</button>
+          <button class="chip ${draft.status === "Cancelled" ? "on" : ""}" data-lesson-status="Cancelled">Cancelled</button>
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn" id="saveLessonBtn" style="flex:1">Save</button>
+        <button class="btn-outline" id="cancelLessonBtn">Cancel</button>
+        ${!state.lessonDraftIsNew ? `<button class="btn-text" id="deleteLessonBtn" style="color:#B4403A">Delete</button>` : ""}
+      </div>
+      <p class="form-msg" style="color:var(--muted)">${esc(state.savedNote)}</p>
+      ${state.errorMsg ? `<p class="form-error">${esc(state.errorMsg)}</p>` : ""}
+    `;
+  }
+
+  function bindLessonsTab() {
+    document.querySelectorAll("[data-edit-lesson]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const l = state.lessons.find((x) => x.id === btn.getAttribute("data-edit-lesson"));
+        if (!l) return;
+        state.lessonDraft = Object.assign({}, l);
+        state.lessonDraftIsNew = false;
+        state.savedNote = `Editing ${formatLessonDateTime(l.date)}.`;
+        state.errorMsg = "";
+        renderTabBody();
+      });
+    });
+
+    if (!state.lessonDraft) return;
+
+    document.querySelectorAll("[data-lesson-status]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.lessonDraft.status = btn.getAttribute("data-lesson-status"); renderTabBody(); });
+    });
+    document.getElementById("saveLessonBtn").addEventListener("click", saveLessonDraft);
+    document.getElementById("cancelLessonBtn").addEventListener("click", () => {
+      state.lessonDraft = null;
+      state.savedNote = "Edit discarded.";
+      renderTabBody();
+    });
+    const delBtn = document.getElementById("deleteLessonBtn");
+    if (delBtn) delBtn.addEventListener("click", deleteLessonDraft);
+
+    ["lDate", "lPrice", "lCapacity", "lBooked", "lLocation", "lNotes"].forEach((id) => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", () => {
+        state.lessonDraft.date = fromDatetimeLocal(document.getElementById("lDate").value);
+        state.lessonDraft.price = Number(document.getElementById("lPrice").value) || 0;
+        state.lessonDraft.capacity = Number(document.getElementById("lCapacity").value) || 0;
+        state.lessonDraft.booked = Number(document.getElementById("lBooked").value) || 0;
+        state.lessonDraft.location = document.getElementById("lLocation").value;
+        state.lessonDraft.notes = document.getElementById("lNotes").value;
+      });
+    });
+  }
+
+  async function saveLessonDraft() {
+    const d = state.lessonDraft;
+    if (!d.date) {
+      state.errorMsg = "Set a date and time before saving.";
+      renderTabBody();
+      return;
+    }
+    state.errorMsg = "";
+    const saveBtn = document.getElementById("saveLessonBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      if (state.lessonDraftIsNew) {
+        const data = await authFetch("/.netlify/functions/lessons", {
+          method: "POST",
+          body: JSON.stringify(d)
+        });
+        state.lessons.push(data.record);
+      } else {
+        const data = await authFetch("/.netlify/functions/lessons", {
+          method: "PATCH",
+          body: JSON.stringify(d)
+        });
+        state.lessons = state.lessons.map((l) => (l.id === data.record.id ? data.record : l));
+      }
+      state.lessons.sort((a, b) => new Date(a.date) - new Date(b.date));
+      state.savedNote = `Saved. ${formatLessonDateTime(d.date)}.`;
+      state.lessonDraft = null;
+      renderDashboard();
+    } catch (err) {
+      state.errorMsg = err.message;
+      renderTabBody();
+    }
+  }
+
+  async function deleteLessonDraft() {
+    const d = state.lessonDraft;
+    if (!confirm(`Remove the ${formatLessonDateTime(d.date)} session for good?`)) return;
+    try {
+      await authFetch(`/.netlify/functions/lessons?id=${encodeURIComponent(d.id)}`, { method: "DELETE" });
+      state.lessons = state.lessons.filter((l) => l.id !== d.id);
+      state.lessonDraft = null;
+      state.savedNote = "Lesson removed.";
+      renderDashboard();
+    } catch (err) {
+      state.errorMsg = err.message;
+      renderTabBody();
+    }
+  }
+
   /* ---------------- Enquiries tab ---------------- */
 
   function enquiriesTabHtml() {
@@ -620,6 +836,8 @@
 
   function boot() {
     state.paintingsLoaded = false;
+    state.enquiriesLoaded = false;
+    state.lessonsLoaded = false;
     state.errorMsg = "";
     renderApp();
   }
@@ -628,6 +846,10 @@
     clearSession();
     state.paintings = [];
     state.paintingsLoaded = false;
+    state.enquiries = [];
+    state.enquiriesLoaded = false;
+    state.lessons = [];
+    state.lessonsLoaded = false;
     renderLoginGate();
   });
 

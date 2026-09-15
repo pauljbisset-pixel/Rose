@@ -78,8 +78,34 @@
     return records.map(normalizePainting).sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
+  function normalizeLesson(record) {
+    const f = record.fields;
+    return {
+      id: record.id,
+      date: f.Date || "",
+      price: typeof f.Price === "number" ? f.Price : 0,
+      capacity: typeof f.Capacity === "number" ? f.Capacity : 0,
+      booked: typeof f.Booked === "number" ? f.Booked : 0,
+      status: f.Status || "Open",
+      location: f.Location || "",
+      notes: f.Notes || ""
+    };
+  }
+
+  // Fetches every lesson row; the caller filters to what's actually
+  // bookable (open, upcoming, spots left) — kept simple rather than a
+  // date-comparison Airtable formula, since the row count is small.
+  async function fetchLessons() {
+    const records = await fetchAllRecords(cfg.lessonsTable, {
+      "sort[0][field]": "Date",
+      "sort[0][direction]": "asc"
+    });
+    return records.map(normalizeLesson);
+  }
+
   window.RoseAirtable = {
     fetchPaintings,
+    fetchLessons,
     thumbUrl,
     fullUrl
   };

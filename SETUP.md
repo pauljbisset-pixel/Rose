@@ -55,6 +55,23 @@ You don't need to add any rows by hand — the dashboard's "+ Add a painting"
 button creates `Paintings` rows, and every checkout submission creates an
 `Enquiries` row automatically.
 
+### Table: `Lessons`
+
+For the "Paint with Rose" art lesson booking section on the homepage.
+
+| Field name | Type | Notes |
+|---|---|---|
+| `Date`     | Date, **with "include a time field" turned on** | The session's start date & time. Set a fixed timezone under the field's options (e.g. Europe/London) rather than "same timezone for everyone viewing" — keeps times unambiguous. |
+| `Price`    | Number (currency £) | Per person — the dashboard defaults new lessons to £45 |
+| `Capacity` | Number (integer) | Max people for that session |
+| `Booked`   | Number (integer) | How many are confirmed so far — **Rose updates this by hand** in the dashboard as she confirms bookings (bookings are enquiries, not automatic — see below). Default `0`. |
+| `Status`   | Single select: `Open`, `Cancelled` | Default `Open`. There's deliberately no separate "Full" option — the shop works that out itself once `Booked` reaches `Capacity`, so nothing needs remembering there. |
+| `Location` | Single line text | Optional — e.g. "Studio, Instow" |
+| `Notes`    | Long text | Optional — anything specific to that date (skill level, what's covered, etc.) |
+
+You don't need to add rows by hand here either — the dashboard's Lessons
+tab (its own "+ Add a lesson" button, alongside Paintings) creates these.
+
 ### Two API tokens (Account → Developer hub → Personal access tokens)
 
 Create **two separate tokens** — don't reuse one, since one of them ends up
@@ -67,6 +84,12 @@ in the browser and must not be able to write anything:
    variables, never in a file)
    - Scopes: `data.records:read`, `data.records:write`
    - Access: only this one base
+
+Both tokens are scoped to the **whole base**, not individual tables, so
+adding the `Lessons` table above doesn't need either token touching again
+— it's covered automatically. (If Airtable's token editor shows a list of
+specific tables rather than "all tables" for yours, just add `Lessons` to
+that list on both tokens.)
 
 Send me:
 - The **base ID** (starts `app…` — visible in the base's API docs, or in
@@ -106,13 +129,13 @@ Send me:
 
 ---
 
-## 3. EmailJS — one template, serving the enquiry email, the dashboard login link, the homepage contact form, and the commission enquiry form
+## 3. EmailJS — one template, serving the enquiry email, the dashboard login link, the homepage contact form, the commission enquiry form, and the lesson booking form
 
 Using your existing account (service `service_3zklcnj`, public key
-`ZJel9MV1Hctfuo6cU` — already in the code). All four emails run through
+`ZJel9MV1Hctfuo6cU` — already in the code). All five emails run through
 the **same template** — EmailJS's plan limits are on how many templates
 you can *create*, not how many variables one template can use or how many
-times it's sent, so one flexible template covers all four rather than
+times it's sent, so one flexible template covers all five rather than
 needing separate ones.
 
 Create (or you may already have) a template with these variables:
@@ -160,6 +183,14 @@ fields they can fill in go through `list_label`/`items` (the same slot
 the shop enquiry uses for its list of paintings), so the email reads
 as a short "Commission details" list above the description when either
 is filled in, and just omits that section when both are left blank.
+
+For the **lesson booking form** (also `index.html`), `email_kind` =
+"New Lesson Booking Enquiry", `list_label` = "Session" with `items` set
+to the chosen date/time (or a note that no date was picked, if the
+visitor messaged in with no sessions currently open), and — since a
+lesson actually has a fixed price, unlike a commission — `highlight_label`
+= "Price" with `total` set to that session's price, so the email reads
+with the price shown clearly like the shop enquiry does.
 
 If you're adapting a template you already built for the enquiry email
 (rather than starting fresh), just make sure `email_kind`, `list_label`,
@@ -305,7 +336,14 @@ needed on your end.
   with its own form (size/space and budget are optional, both fold into
   the same email alongside the visitor's description) — both send via
   EmailJS and log to the dashboard's Enquiries tab, same as the shop's
-  checkout.
+  checkout. Also a "Paint with Rose" **Lessons** section — upcoming Open
+  sessions with spots-left shown, feeding a booking enquiry form for a
+  chosen date; if nothing's currently open it shows a friendly note
+  instead of an empty form.
+- **`netlify/functions/lessons.js`** — session-gated CRUD for the
+  Lessons table, mirroring `paintings.js` exactly. The public homepage
+  reads Lessons directly with the read-only Airtable token (like
+  paintings/prints), never through this function.
 - **`shop.html`** — gallery with optional category filters, painting
   detail pages, basket (drawer + full page), checkout as an enquiry form,
   thank-you screen. Reads Airtable directly with the read-only token.
@@ -319,6 +357,9 @@ needed on your end.
   stats cards (now including "Most loved", based on hearts), Paintings
   tab (drag-to-reorder, inline edit, Cloudinary photo upload,
   Available/Reserved/Sold status, an optional Story note, delete),
+  a new **Lessons tab** (add a session's date/time/capacity/price,
+  update how many are Booked as she confirms them, mark Cancelled,
+  delete — sessions list soonest-first automatically), and an
   Enquiries tab (reads what visitors submit, lets Rose mark
   New/Contacted/Closed). If she's been away 2+ days, the first thing she
   sees on her next visit is a "Welcome back" recap — new enquiries,
@@ -415,3 +456,26 @@ needed on your end.
   the shop's checkout already uses) so they show up on the dashboard
   even if an email goes to spam — worth doing consistently now rather
   than leaving the contact form as the one form that only emails.
+- **Lessons are enquiry-only, same as everything else — no payment
+  processing.** Booking a lesson sends an enquiry for a specific date;
+  it never reserves a spot automatically. Rose confirms and takes
+  payment manually (bank transfer, as elsewhere), then updates that
+  session's `Booked` count in her dashboard herself. This was a
+  deliberate choice over instant Stripe-style pay-to-book — it keeps
+  the site's payment surface at zero (nothing to secure, no refund
+  flows, no webhook plumbing) at the cost of a booking not being
+  instantly guaranteed. If that tradeoff ever stops feeling right —
+  e.g. sessions regularly filling before Rose can reply — Stripe
+  Payment Links (one per session, no custom payment code needed) would
+  be the next step up without a full rebuild.
+- **A session's "Full" state is computed, not stored.** The `Status`
+  field only has `Open`/`Cancelled` — whether a session is full is
+  worked out from `Booked >= Capacity` wherever it matters (the public
+  list, and the dashboard's row pill), so there's no way for Rose to
+  forget to flip a status and accidentally leave a full class bookable.
+  She only ever has to think about Cancelled.
+- **No overbooking protection beyond Rose's own judgement.** Because
+  booking is an enquiry (not an instant transaction), two people could
+  enquire about the last spot at the same time; whoever she confirms
+  first gets it. Same category of risk as everything else on this
+  site being manually confirmed — not a new one introduced by lessons.
