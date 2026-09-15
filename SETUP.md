@@ -106,13 +106,13 @@ Send me:
 
 ---
 
-## 3. EmailJS — one template, serving the enquiry email, the dashboard login link, and the homepage contact form
+## 3. EmailJS — one template, serving the enquiry email, the dashboard login link, the homepage contact form, and the commission enquiry form
 
 Using your existing account (service `service_3zklcnj`, public key
-`ZJel9MV1Hctfuo6cU` — already in the code). All three emails run through
+`ZJel9MV1Hctfuo6cU` — already in the code). All four emails run through
 the **same template** — EmailJS's plan limits are on how many templates
 you can *create*, not how many variables one template can use or how many
-times it's sent, so one flexible template covers all three rather than
+times it's sent, so one flexible template covers all four rather than
 needing separate ones.
 
 Create (or you may already have) a template with these variables:
@@ -152,6 +152,14 @@ For the **homepage contact form** (`index.html`), the code sends
 name/email/phone/message; `list_label`, `items`, and `highlight_label`/
 `total` are left blank since there's no basket to list — the template
 just prints a couple of empty lines there, which is fine.
+
+For the **commission enquiry form** (also `index.html`), `email_kind` =
+"New Commission Enquiry" and the visitor's description goes through
+`message` as usual — the optional "approximate size" and "budget"
+fields they can fill in go through `list_label`/`items` (the same slot
+the shop enquiry uses for its list of paintings), so the email reads
+as a short "Commission details" list above the description when either
+is filled in, and just omits that section when both are left blank.
 
 If you're adapting a template you already built for the enquiry email
 (rather than starting fresh), just make sure `email_kind`, `list_label`,
@@ -293,7 +301,11 @@ needed on your end.
 
 - **`index.html`** — the existing portfolio/about page, now reading the
   gallery from Airtable instead of a hardcoded list, with a new "Shop"
-  nav link
+  nav link, a "Get in touch" contact form, and a "Commissions" section
+  with its own form (size/space and budget are optional, both fold into
+  the same email alongside the visitor's description) — both send via
+  EmailJS and log to the dashboard's Enquiries tab, same as the shop's
+  checkout.
 - **`shop.html`** — gallery with optional category filters, painting
   detail pages, basket (drawer + full page), checkout as an enquiry form,
   thank-you screen. Reads Airtable directly with the read-only token.
@@ -393,3 +405,13 @@ needed on your end.
   destination (same as it already did for the shop), so this isn't a
   bigger promise than that — it just stops adding a second, more
   scraper-obvious copy of it on the homepage on top.
+- **Commissions get their own section and form, v1 kept deliberately
+  simple.** No pricing calculator and no reference-photo upload for
+  now — just a short "how it works" explainer and a form asking for
+  size/space and budget (both optional free text, not fixed price
+  bands, since I don't know Rose's actual commission pricing) plus a
+  required description. Both new and now the existing contact form
+  also log to Airtable's `Enquiries` table (same best-effort pattern
+  the shop's checkout already uses) so they show up on the dashboard
+  even if an email goes to spam — worth doing consistently now rather
+  than leaving the contact form as the one form that only emails.
