@@ -224,7 +224,14 @@
   .socials a:hover{color:var(--sea)}
 
   /* ---------- lessons ---------- */
-  .lessons{background:var(--shell-2);text-align:center}
+  .section-hero{position:relative;overflow:hidden;background:var(--ink)}
+  .section-hero img{width:100%;height:clamp(220px,38vh,380px);object-fit:cover;opacity:.92}
+  .section-hero .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,26,33,.78),rgba(10,26,33,.15))}
+  .section-hero .inner{position:absolute;inset:auto 0 0 0;padding:clamp(1.4rem,4vw,2.6rem) var(--pad);max-width:var(--maxw);margin:0 auto;color:#fff}
+  .section-hero .inner .kicker{color:#fff;opacity:.85;margin:0 0 .6rem}
+  .section-hero .inner h2{color:#fff;margin:0}
+
+  .lessons{background:var(--shell-2);text-align:center;padding-top:0}
   .lessons p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2rem}
   .lesson-dates{display:flex;flex-wrap:wrap;justify-content:center;gap:.9rem;margin:0 0 2.4rem}
   .date-card{padding:.85rem 1.2rem;border:1px solid var(--sand);border-radius:10px;font-size:.82rem;color:var(--ink-soft);background:#fff;max-width:260px;text-align:left}
@@ -234,7 +241,7 @@
   .date-card .notes{margin:.4rem 0 0;padding-top:.4rem;border-top:1px solid var(--shell-2);font-size:.78rem;color:var(--muted);line-height:1.5}
 
   /* ---------- commissions ---------- */
-  .commissions{text-align:center}
+  .commissions{text-align:center;padding-top:0}
   .commissions p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2.4rem}
   .steps{list-style:none;margin:0 0 2.8rem;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:1.6rem 2.6rem;max-width:760px;margin-left:auto;margin-right:auto}
   .steps li{display:flex;align-items:center;gap:.7rem;font-size:.85rem;color:var(--ink-soft);max-width:220px;text-align:left}
@@ -315,9 +322,15 @@
 
 <!-- ================= LESSONS ================= -->
 <section class="lessons" id="lessons">
-  <div class="wrap reveal">
-    <p class="kicker">Art Lessons</p>
-    <h2>Paint with Rose</h2>
+  <div class="section-hero">
+    <img src="images/Lessons.jpeg" alt="Rose teaching a painting lesson in her studio, overlooking the Instow estuary">
+    <div class="overlay"></div>
+    <div class="inner">
+      <p class="kicker">Art Lessons</p>
+      <h2>Paint with Rose</h2>
+    </div>
+  </div>
+  <div class="wrap reveal" style="padding-top:clamp(2.4rem,6vw,4.5rem)">
     <p>A relaxed 90-minute session in the studio, learning her layered oil-and-wax technique — £45 per person, all materials included.</p>
     <div class="lesson-dates" id="lessonDates"></div>
     <form class="contact-form" id="lessonForm" novalidate>
@@ -346,9 +359,15 @@
 
 <!-- ================= COMMISSIONS ================= -->
 <section class="commissions" id="commissions">
-  <div class="wrap reveal">
-    <p class="kicker">Commissions</p>
-    <h2>A painting made for your space</h2>
+  <div class="section-hero">
+    <img src="images/Commissions.jpeg" alt="Rose painting a commissioned piece from reference photos in her studio">
+    <div class="overlay"></div>
+    <div class="inner">
+      <p class="kicker">Commissions</p>
+      <h2>A painting made for your space</h2>
+    </div>
+  </div>
+  <div class="wrap reveal" style="padding-top:clamp(2.4rem,6vw,4.5rem)">
     <p>Rose takes on a limited number of commissions — tell her about the space, the colours, the feeling you're after, and she'll reply with ideas, a price, and a rough timeline.</p>
     <ul class="steps">
       <li><span>1</span>Tell her what you have in mind below</li>
