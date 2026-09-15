@@ -226,9 +226,12 @@
   /* ---------- lessons ---------- */
   .lessons{background:var(--shell-2);text-align:center}
   .lessons p{color:var(--ink-soft);max-width:52ch;margin:0 auto 2rem}
-  .lesson-dates{display:flex;flex-wrap:wrap;justify-content:center;gap:.7rem;margin:0 0 2.4rem}
-  .date-chip{padding:.55rem 1.1rem;border:1px solid var(--sand);border-radius:999px;font-size:.82rem;color:var(--ink-soft);background:#fff}
-  .date-chip.low{border-color:var(--sea);color:var(--sea)}
+  .lesson-dates{display:flex;flex-wrap:wrap;justify-content:center;gap:.9rem;margin:0 0 2.4rem}
+  .date-card{padding:.85rem 1.2rem;border:1px solid var(--sand);border-radius:10px;font-size:.82rem;color:var(--ink-soft);background:#fff;max-width:260px;text-align:left}
+  .date-card .when{margin:0;font-family:var(--display);font-size:1rem;color:var(--ink)}
+  .date-card .spots{margin:.2rem 0 0}
+  .date-card.low .spots{color:var(--sea)}
+  .date-card .notes{margin:.4rem 0 0;padding-top:.4rem;border-top:1px solid var(--shell-2);font-size:.78rem;color:var(--muted);line-height:1.5}
 
   /* ---------- commissions ---------- */
   .commissions{text-align:center}
@@ -666,7 +669,11 @@ function renderLessonDates(){
   }
   lessonDates.innerHTML=OPEN_LESSONS.map(l=>{
     const left=l.capacity-l.booked;
-    return `<span class="date-chip ${left<=2?'low':''}">${formatLessonDate(l.date)} · ${left} spot${left===1?'':'s'} left</span>`;
+    return `<div class="date-card ${left<=2?'low':''}">
+      <p class="when">${formatLessonDate(l.date)}</p>
+      <p class="spots">${left} spot${left===1?'':'s'} left${l.location ? ' · '+l.location : ''}</p>
+      ${l.notes ? `<p class="notes">${l.notes}</p>` : ''}
+    </div>`;
   }).join('');
   lessonDateSelect.innerHTML=OPEN_LESSONS.map(l=>{
     const left=l.capacity-l.booked;
