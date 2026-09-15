@@ -202,15 +202,23 @@
   .btn{
     display:inline-block;text-decoration:none;background:var(--ink);color:var(--shell);
     padding:1rem 2.4rem;font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;
-    border-radius:999px;transition:background .3s,transform .3s;
+    border-radius:999px;transition:background .3s,transform .3s;border:0;cursor:pointer;font-family:var(--body);
   }
   .btn:hover{background:var(--sea);transform:translateY(-2px)}
-  .phone{margin:1.6rem 0 0;font-size:.95rem;color:var(--muted)}
-  .phone a{
-    color:var(--ink-soft);text-decoration:none;letter-spacing:.06em;
-    border-bottom:1px solid var(--sand);padding-bottom:2px;transition:border-color .3s,color .3s;
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .contact-form{max-width:440px;margin:0 auto;text-align:left;display:flex;flex-direction:column;gap:1rem}
+  .contact-row2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:520px){.contact-row2{grid-template-columns:1fr}}
+  .contact-field{display:flex;flex-direction:column;gap:.4rem;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .contact-field input,.contact-field textarea{
+    min-height:3rem;padding:0 .9rem;border:1px solid rgba(21,48,60,.2);border-radius:2px;background:#fff;
+    font-size:1rem;letter-spacing:0;text-transform:none;color:var(--ink);font-family:var(--body);
   }
-  .phone a:hover{color:var(--sea);border-color:var(--sea)}
+  .contact-field textarea{padding:.8rem .9rem;line-height:1.6;resize:vertical;min-height:6.5rem}
+  .contact-field input:focus,.contact-field textarea:focus{outline:2px solid var(--sea);outline-offset:1px}
+  .contact-status{min-height:1.3rem;margin:0;font-size:.85rem}
+  .contact-status.err{color:#B4403A}
+  .contact-status.ok{color:var(--sea)}
   .socials{margin-top:2.2rem;display:flex;gap:1.6rem;justify-content:center}
   .socials a{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .25s}
   .socials a:hover{color:var(--sea)}
@@ -288,8 +296,24 @@
     <p class="kicker">Enquiries</p>
     <h2>Get in touch</h2>
     <p id="contactCopy">For available paintings, commissions, or just to say hello — I'd love to hear from you.</p>
-    <a class="btn" id="emailBtn" href="#">Email Rose</a>
-    <p class="phone" id="phoneLine"></p>
+    <form class="contact-form" id="contactForm" novalidate>
+      <label class="contact-field">Name
+        <input type="text" name="name" placeholder="Your name" required>
+      </label>
+      <div class="contact-row2">
+        <label class="contact-field">Email
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </label>
+        <label class="contact-field">Phone <span style="text-transform:none;letter-spacing:0;font-size:.8rem">optional</span>
+          <input type="tel" name="phone" placeholder="07…">
+        </label>
+      </div>
+      <label class="contact-field">Message
+        <textarea name="message" rows="5" placeholder="What would you like to ask?" required></textarea>
+      </label>
+      <button type="submit" class="btn" id="contactSubmit">Send message</button>
+      <p class="contact-status" id="contactStatus"></p>
+    </form>
     <div class="socials" id="socials"></div>
   </div>
 </section>
@@ -309,13 +333,14 @@
 
 <script src="js/config.js"></script>
 <script src="js/airtable.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 /* ===============================================================
-   CONTACT DETAILS — fill these in, leave any blank to hide it.
+   CONTACT DETAILS — the email address itself lives in js/config.js
+   (CFG.contact.email), shared with the shop — the contact form below
+   sends there. Social links only, leave blank to hide either.
 ================================================================*/
 const CONTACT = {
-  email:     "budgerose5@gmail.com",
-  phone:     "07929 973208",           // shown as written; dialled digits are stripped automatically
   instagram: "",                       // full URL, e.g. "https://instagram.com/rosebudgeart"
   facebook:  ""                        // full URL
 };
@@ -394,21 +419,64 @@ addEventListener('scroll',()=>nav.classList.toggle('solid', scrollY > innerHeigh
 const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){e.target.classList.add('in'); io.unobserve(e.target);} }),{threshold:.15});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-/* contact details */
-const emailBtn=document.getElementById('emailBtn'), socials=document.getElementById('socials');
-if(CONTACT.email){ emailBtn.href='mailto:'+CONTACT.email; }
-else { emailBtn.remove(); }
-
-const phoneLine=document.getElementById('phoneLine');
-if(CONTACT.phone){
-  const tel=CONTACT.phone.replace(/[^\d+]/g,'');
-  phoneLine.innerHTML=`or call <a href="tel:${tel}">${CONTACT.phone}</a>`;
-} else { phoneLine.remove(); }
-
-if(!CONTACT.email && !CONTACT.phone && !CONTACT.instagram && !CONTACT.facebook){
-  document.getElementById('contactCopy').textContent =
-    'Rose paints and exhibits in Instow, North Devon. Enquiries about available paintings and commissions are always welcome.';
+/* contact form — sends via EmailJS, no mailto link and no phone number
+   sitting in the page for scrapers to harvest (same shared template the
+   shop's enquiry form and the dashboard's login email already use). */
+if (CFG.emailjs.publicKey && window.emailjs) {
+  emailjs.init({ publicKey: CFG.emailjs.publicKey });
 }
+const contactForm=document.getElementById('contactForm');
+const contactStatus=document.getElementById('contactStatus');
+const contactSubmit=document.getElementById('contactSubmit');
+contactForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const name=contactForm.name.value.trim();
+  const email=contactForm.email.value.trim();
+  const phone=contactForm.phone.value.trim();
+  const message=contactForm.message.value.trim();
+  if(!name || !email || !message){
+    contactStatus.className='contact-status err';
+    contactStatus.textContent='Please add your name, email and a message.';
+    return;
+  }
+  contactSubmit.disabled=true;
+  contactSubmit.textContent='Sending…';
+  contactStatus.className='contact-status';
+  contactStatus.textContent='';
+  try{
+    if(!window.emailjs || CFG.emailjs.templateId.indexOf('TODO_')===0){
+      throw new Error("Email isn't configured yet");
+    }
+    await emailjs.send(CFG.emailjs.serviceId, CFG.emailjs.templateId, {
+      email_kind: 'New Contact Message',
+      list_label: '',
+      highlight_label: '',
+      footer_label: 'Submitted',
+      action_html: '',
+      to_email: CFG.contact.email,
+      from_name: name,
+      from_email: email,
+      from_phone: phone || '—',
+      message: message,
+      items: '',
+      total: '',
+      submitted_at: new Date().toLocaleString('en-GB')
+    });
+    contactForm.reset();
+    contactStatus.className='contact-status ok';
+    contactStatus.textContent="Thanks — I'll get back to you soon.";
+    contactSubmit.textContent='Message sent';
+  }catch(err){
+    console.warn('Contact form send failed:', err);
+    contactStatus.className='contact-status err';
+    contactStatus.innerHTML=`Something went wrong sending that — please try again, or email <a href="mailto:${CFG.contact.email}">${CFG.contact.email}</a> directly.`;
+    contactSubmit.disabled=false;
+    contactSubmit.textContent='Send message';
+  }
+});
+
+/* socials */
+const socials=document.getElementById('socials');
 [['Instagram',CONTACT.instagram],['Facebook',CONTACT.facebook]].forEach(([n,u])=>{
   if(!u) return;
   const a=document.createElement('a');

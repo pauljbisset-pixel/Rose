@@ -106,14 +106,14 @@ Send me:
 
 ---
 
-## 3. EmailJS — one template, serving both the enquiry email and the dashboard login link
+## 3. EmailJS — one template, serving the enquiry email, the dashboard login link, and the homepage contact form
 
 Using your existing account (service `service_3zklcnj`, public key
-`ZJel9MV1Hctfuo6cU` — already in the code). Both emails run through the
-**same template** — EmailJS's plan limits are on how many templates you
-can *create*, not how many variables one template can use or how many
-times it's sent, so one flexible template covers both rather than
-needing a second.
+`ZJel9MV1Hctfuo6cU` — already in the code). All three emails run through
+the **same template** — EmailJS's plan limits are on how many templates
+you can *create*, not how many variables one template can use or how many
+times it's sent, so one flexible template covers all three rather than
+needing separate ones.
 
 Create (or you may already have) a template with these variables:
 
@@ -146,6 +146,12 @@ sends different values through those same slots — `email_kind` = "Sign-In
 Link", a clickable sign-in link in place of the message, "Expires in: 15
 minutes" in place of the total, and so on — so the same layout reads
 sensibly as a login email instead.
+
+For the **homepage contact form** (`index.html`), the code sends
+`email_kind` = "New Contact Message" plus the visitor's actual
+name/email/phone/message; `list_label`, `items`, and `highlight_label`/
+`total` are left blank since there's no basket to list — the template
+just prints a couple of empty lines there, which is fine.
 
 If you're adapting a template you already built for the enquiry email
 (rather than starting fresh), just make sure `email_kind`, `list_label`,
@@ -376,3 +382,14 @@ needed on your end.
   orderable regardless of status. The homepage portfolio grid picks up
   the same fix, so a sold painting no longer vanishes from Rose's "about"
   page either.
+- **Homepage "Get in touch" is now a real form, not a `mailto:`/`tel:`
+  link.** A `mailto:` link and a visible phone number are exactly what
+  email-harvesting bots scan a page for — clicking through to an email
+  client was also friction most visitors won't bother with. Replaced
+  with a proper Name/Email/Phone/Message form that sends straight
+  through EmailJS (same shared template as the shop enquiry and login
+  emails), and removed the visible phone number from the page entirely.
+  Rose's email address still lives in `js/config.js` as the send
+  destination (same as it already did for the shop), so this isn't a
+  bigger promise than that — it just stops adding a second, more
+  scraper-obvious copy of it on the homepage on top.
