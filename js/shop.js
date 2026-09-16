@@ -24,8 +24,11 @@
     paintings: [],
     loaded: false,
     error: null,
+    cards: [],
+    cardsLoaded: false,
     filter: "all",
     sort: "featured",
+    cardFilter: "all",
     basket: loadBasket(),
     hearted: loadHearted(),
     drawerOpen: false,
@@ -122,14 +125,27 @@
     return kind === "print" ? `${paintingId}:print:${size}` : paintingId;
   }
 
+  function cardById(id) {
+    return state.cards.find((c) => c.id === id);
+  }
+
   function linePrice(item) {
     if (item.kind === "print") return printPrice(item.size);
+    if (item.kind === "card") {
+      const c = cardById(item.cardId);
+      return c ? c.price : 0;
+    }
     const w = byId(item.paintingId);
     return w ? w.price : 0;
   }
 
   function lineLabel(item) {
-    return item.kind === "print" ? `${item.size} print` : "Original";
+    if (item.kind === "print") return `${item.size} print`;
+    if (item.kind === "card") {
+      const c = cardById(item.cardId);
+      return `${(c && c.type) || "Printed"} card`;
+    }
+    return "Original";
   }
 
   function money(n) {
@@ -146,17 +162,27 @@
     return state.paintings.find((w) => w.id === id);
   }
 
+  // Every line item carries a qty (defaulting to 1 for old/original/print
+  // items, which never expose a stepper) — only card lines ever go above
+  // 1. "product" is whichever painting or card the line refers to, so the
+  // rendering code below doesn't need to branch on kind just to show an
+  // image and a title.
   function basketLines() {
     return state.basket.map((item) => {
+      const qty = item.qty || 1;
+      if (item.kind === "card") {
+        const card = cardById(item.cardId);
+        return card ? Object.assign({}, item, { product: card, qty, price: (card.price || 0) * qty }) : null;
+      }
       const painting = byId(item.paintingId);
-      return painting ? Object.assign({}, item, { painting, price: linePrice(item) }) : null;
+      return painting ? Object.assign({}, item, { product: painting, qty, price: linePrice(item) * qty }) : null;
     }).filter(Boolean);
   }
 
   function addOriginalToBasket(id) {
     const key = lineKey(id, "original");
     if (!state.basket.some((it) => it.key === key)) {
-      state.basket.push({ key, paintingId: id, kind: "original" });
+      state.basket.push({ key, paintingId: id, kind: "original", qty: 1 });
       saveBasket();
     }
     state.drawerOpen = true;
@@ -166,10 +192,34 @@
   function addPrintToBasket(id, size) {
     const key = lineKey(id, "print", size);
     if (!state.basket.some((it) => it.key === key)) {
-      state.basket.push({ key, paintingId: id, kind: "print", size });
+      state.basket.push({ key, paintingId: id, kind: "print", size, qty: 1 });
       saveBasket();
     }
     state.drawerOpen = true;
+    renderAll();
+  }
+
+  function addCardToBasket(cardId) {
+    const key = `card:${cardId}`;
+    const existing = state.basket.find((it) => it.key === key);
+    if (existing) {
+      existing.qty = (existing.qty || 1) + 1;
+    } else {
+      state.basket.push({ key, kind: "card", cardId, qty: 1 });
+    }
+    saveBasket();
+    state.drawerOpen = true;
+    renderAll();
+  }
+
+  function changeCardQty(key, delta) {
+    const item = state.basket.find((it) => it.key === key);
+    if (!item) return;
+    item.qty = (item.qty || 1) + delta;
+    if (item.qty <= 0) {
+      state.basket = state.basket.filter((it) => it.key !== key);
+    }
+    saveBasket();
     renderAll();
   }
 
@@ -183,6 +233,7 @@
     const hash = location.hash.replace(/^#\/?/, "");
     const parts = hash.split("/").filter(Boolean);
     if (parts[0] === "work" && parts[1]) return { screen: "work", id: decodeURIComponent(parts[1]) };
+    if (parts[0] === "cards") return { screen: "cards" };
     if (parts[0] === "basket") return { screen: "basket" };
     if (parts[0] === "checkout") return { screen: "checkout" };
     if (parts[0] === "confirm") return { screen: "confirm" };
@@ -197,7 +248,8 @@
   /* ---------------- render: shell bits ---------------- */
 
   function renderBasketCount() {
-    basketCountEl.textContent = String(state.basket.length);
+    const totalQty = state.basket.reduce((n, it) => n + (it.qty || 1), 0);
+    basketCountEl.textContent = String(totalQty);
   }
 
   function renderDrawer() {
@@ -234,19 +286,38 @@
     drawerRoot.querySelectorAll("[data-remove]").forEach((btn) => {
       btn.addEventListener("click", () => removeFromBasket(btn.getAttribute("data-remove")));
     });
+    bindQtySteppers(drawerRoot);
   }
 
   function drawerLineHtml(l) {
     return `
       <div style="display:flex;gap:14px;align-items:flex-start">
-        <img src="${esc(RoseAirtable.thumbUrl(l.painting.imageUrl))}" alt="${esc(l.painting.title)}" style="width:74px;height:74px;object-fit:cover;background:var(--sand)">
+        <img src="${esc(RoseAirtable.thumbUrl(l.product.imageUrl))}" alt="${esc(l.product.title)}" style="width:74px;height:74px;object-fit:cover;background:var(--sand)">
         <div style="flex:1;min-width:0">
-          <p style="margin:0 0 3px;font-family:var(--display);font-size:19px;line-height:1.2">${esc(l.painting.title)}</p>
+          <p style="margin:0 0 3px;font-family:var(--display);font-size:19px;line-height:1.2">${esc(l.product.title)}</p>
           <p style="margin:0 0 6px;font-size:12px;color:var(--muted)">${esc(lineLabel(l))}</p>
-          <button class="btn-text" data-remove="${esc(l.key)}">Remove</button>
+          ${l.kind === "card" ? qtyStepperHtml(l) : `<button class="btn-text" data-remove="${esc(l.key)}">Remove</button>`}
         </div>
         <p style="margin:0;font-size:15px">${money(l.price)}</p>
       </div>`;
+  }
+
+  function qtyStepperHtml(l) {
+    return `
+      <div class="qty-stepper">
+        <button type="button" data-qty-dec="${esc(l.key)}" aria-label="Fewer">−</button>
+        <span>${l.qty}</span>
+        <button type="button" data-qty-inc="${esc(l.key)}" aria-label="More">+</button>
+      </div>`;
+  }
+
+  function bindQtySteppers(root) {
+    root.querySelectorAll("[data-qty-dec]").forEach((btn) => {
+      btn.addEventListener("click", () => changeCardQty(btn.getAttribute("data-qty-dec"), -1));
+    });
+    root.querySelectorAll("[data-qty-inc]").forEach((btn) => {
+      btn.addEventListener("click", () => changeCardQty(btn.getAttribute("data-qty-inc"), 1));
+    });
   }
 
   /* ---------------- render: screens ---------------- */
@@ -271,6 +342,7 @@
       return;
     }
     if (r.screen === "work") return renderWork(r.id);
+    if (r.screen === "cards") return renderCards();
     if (r.screen === "basket") return renderBasket();
     if (r.screen === "checkout") return renderCheckout();
     if (r.screen === "confirm") return renderConfirm();
@@ -375,6 +447,76 @@
     });
   }
 
+  /* ---------------- cards ---------------- */
+
+  const CARD_TYPES = ["Hand-painted", "Printed"];
+
+  function renderCards() {
+    if (!state.cardsLoaded) {
+      app.innerHTML = `<div class="wrap" style="padding:120px 0;text-align:center;color:var(--muted)">Loading the cards…</div>`;
+      return;
+    }
+    const filtered = state.cards.filter((c) => state.cardFilter === "all" || c.type === state.cardFilter);
+    app.innerHTML = `
+      <section class="shop-hero">
+        <img src="images/about.jpg" alt="Notecards by Rose Budge">
+        <div class="overlay"></div>
+        <div class="inner">
+          <p class="eyebrow">Instow · North Devon</p>
+          <h1>Cards</h1>
+          <p>Hand-painted originals and printed reproductions of her work, ready to send.</p>
+        </div>
+      </section>
+      <div class="wrap">
+        <div class="filters-row">
+          <div>
+            <p class="kicker">Notecards</p>
+            <h2 style="margin:0">Cards</h2>
+          </div>
+          ${state.cards.length ? `<div class="filters" id="cardFilters">
+            <button class="chip ${state.cardFilter === "all" ? "on" : ""}" data-card-filter="all">All ${state.cards.length}</button>
+            ${CARD_TYPES.map((t) => `<button class="chip ${state.cardFilter === t ? "on" : ""}" data-card-filter="${esc(t)}">${esc(t)}</button>`).join("")}
+          </div>` : ""}
+        </div>
+        <p class="filters-note">Blank inside, ready to send. Hand-painted cards are one-off originals — once it's gone, it's gone. Printed cards are reproductions of her paintings and can be restocked.</p>
+        ${filtered.length ? `<div class="shop-grid">${filtered.map(cardGridItemHtml).join("")}</div>` :
+          `<div class="basket-empty" style="margin:32px 0"><p>No cards available right now.</p></div>`}
+      </div>`;
+
+    document.querySelectorAll("[data-card-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.cardFilter = btn.getAttribute("data-card-filter"); renderScreen(); });
+    });
+    bindCardGridActions();
+  }
+
+  function cardGridItemHtml(c) {
+    const inBasketItem = state.basket.find((it) => it.key === `card:${c.id}`);
+    const soldOut = c.status !== "Available";
+    return `
+      <article class="work-card">
+        <div class="work-figure" style="cursor:default">
+          <span class="ribbon ${c.type === "Hand-painted" ? "" : "ribbon-reserved"}">${esc(c.type)}</span>
+          <img src="${esc(RoseAirtable.thumbUrl(c.imageUrl))}" alt="${esc(c.title)}" loading="lazy">
+        </div>
+        <p class="work-title">${esc(c.title)}</p>
+        <div class="work-price-row">
+          <p class="work-price">${money(c.price)}</p>
+        </div>
+        ${soldOut
+          ? `<p class="work-status-note">Sold out</p>`
+          : inBasketItem
+            ? qtyStepperHtml(inBasketItem)
+            : `<button class="btn-outline" data-add-card="${esc(c.id)}">Add to basket</button>`}
+      </article>`;
+  }
+
+  function bindCardGridActions() {
+    document.querySelectorAll("[data-add-card]").forEach((btn) => {
+      btn.addEventListener("click", () => addCardToBasket(btn.getAttribute("data-add-card")));
+    });
+    bindQtySteppers(app);
+  }
+
   function renderWork(id) {
     const w = byId(id) || state.paintings[0];
     if (!w) {
@@ -470,10 +612,13 @@
           <div>
             ${lines.map((l) => `
               <div class="basket-line">
-                <img src="${esc(RoseAirtable.thumbUrl(l.painting.imageUrl))}" alt="${esc(l.painting.title)}">
+                <img src="${esc(RoseAirtable.thumbUrl(l.product.imageUrl))}" alt="${esc(l.product.title)}">
                 <div class="info">
-                  <p class="title">${esc(l.painting.title)}</p>
-                  <p class="work-meta" style="margin:0 0 8px">${l.kind === "print" ? esc(l.size) + " print · unframed, rolled in a tube" : esc(l.painting.size) + " · Original"}</p>
+                  <p class="title">${esc(l.product.title)}</p>
+                  <p class="work-meta" style="margin:0 0 8px">${l.kind === "print" ? esc(l.size) + " print · unframed, rolled in a tube"
+                    : l.kind === "card" ? esc(lineLabel(l))
+                    : esc(l.product.size) + " · Original"}</p>
+                  ${l.kind === "card" ? qtyStepperHtml(l) : ""}
                   <button class="btn-text" data-remove="${esc(l.key)}">Remove</button>
                 </div>
                 <p style="margin:0;font-size:16px">${money(l.price)}</p>
@@ -492,6 +637,7 @@
     document.querySelectorAll("[data-remove]").forEach((btn) => {
       btn.addEventListener("click", () => removeFromBasket(btn.getAttribute("data-remove")));
     });
+    bindQtySteppers(app);
     const openShop = document.querySelector('[data-open="__shop"]');
     if (openShop) openShop.addEventListener("click", (e) => { e.preventDefault(); go("#/"); });
     const toCheckout = document.getElementById("toCheckout");
@@ -502,7 +648,7 @@
     const lines = basketLines();
     if (lines.length === 0) { go("#/basket"); return; }
     const sub = lines.reduce((n, l) => n + l.price, 0);
-    const hasPrint = lines.some((l) => l.kind === "print");
+    const needsDelivery = lines.some((l) => l.kind === "print" || l.kind === "card");
     app.innerHTML = `
       <section class="commerce-section">
         <a href="#/basket" class="back-link" data-open="__basket">← Back to basket</a>
@@ -520,7 +666,7 @@
               <label class="form-field">Phone <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">optional</span>
                 <input type="tel" name="phone" placeholder="07…">
               </label>
-              <label class="form-field">Delivery address <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">${hasPrint ? "needed for prints" : "optional"}</span>
+              <label class="form-field">Delivery address <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">${needsDelivery ? "needed for prints/cards" : "optional"}</span>
                 <textarea name="address" rows="2" placeholder="Where should this be sent?"></textarea>
               </label>
               <label class="form-field">Message <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">optional</span>
@@ -536,10 +682,10 @@
             <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px">
               ${lines.map((l) => `
                 <div style="display:flex;gap:12px;align-items:center">
-                  <img src="${esc(RoseAirtable.thumbUrl(l.painting.imageUrl))}" alt="${esc(l.painting.title)}" style="width:56px;height:56px;object-fit:cover;background:var(--sand)">
+                  <img src="${esc(RoseAirtable.thumbUrl(l.product.imageUrl))}" alt="${esc(l.product.title)}" style="width:56px;height:56px;object-fit:cover;background:var(--sand)">
                   <div style="flex:1;min-width:0">
-                    <p style="margin:0;font-family:var(--display);font-size:17px">${esc(l.painting.title)}</p>
-                    <p style="margin:0;font-size:12px;color:var(--muted)">${esc(lineLabel(l))}</p>
+                    <p style="margin:0;font-family:var(--display);font-size:17px">${esc(l.product.title)}</p>
+                    <p style="margin:0;font-size:12px;color:var(--muted)">${esc(lineLabel(l))}${l.qty > 1 ? ` × ${l.qty}` : ""}</p>
                   </div>
                   <p style="margin:0;font-size:14px">${money(l.price)}</p>
                 </div>`).join("")}
@@ -575,7 +721,7 @@
     submitBtn.textContent = "Sending…";
     statusEl.innerHTML = "";
 
-    const itemsText = lines.map((l) => `${l.painting.title} (${lineLabel(l)}) — ${money(l.price)}`).join("\n");
+    const itemsText = lines.map((l) => `${l.product.title} (${lineLabel(l)}${l.qty > 1 ? ` ×${l.qty}` : ""}) — ${money(l.price)}`).join("\n");
     const total = lines.reduce((n, l) => n + l.price, 0);
     const submittedAt = new Date().toLocaleString("en-GB");
     const messageParts = [];
@@ -666,4 +812,7 @@
   RoseAirtable.fetchPaintings()
     .then((paintings) => { state.paintings = paintings; state.loaded = true; renderAll(); })
     .catch((err) => { state.error = err.message; renderAll(); });
+  RoseAirtable.fetchCards()
+    .then((cards) => { state.cards = cards; state.cardsLoaded = true; renderAll(); })
+    .catch((err) => { state.cardsLoaded = true; renderAll(); });
 })();

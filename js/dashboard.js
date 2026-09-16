@@ -26,6 +26,8 @@
     lessonsLoaded: false,
     blogPosts: [],
     blogPostsLoaded: false,
+    cards: [],
+    cardsLoaded: false,
     tab: "works",
     draft: null,
     draftIsNew: false,
@@ -33,8 +35,12 @@
     lessonDraftIsNew: false,
     blogDraft: null,
     blogDraftIsNew: false,
+    cardDraft: null,
+    cardDraftIsNew: false,
     dragFrom: null,
     dragOver: null,
+    cardDragFrom: null,
+    cardDragOver: null,
     savedNote: "Changes here update the shop straight away. Nothing needs code.",
     busy: false,
     errorMsg: "",
@@ -168,6 +174,12 @@
     const data = await authFetch("/.netlify/functions/blog", { method: "GET" });
     state.blogPosts = data.records;
     state.blogPostsLoaded = true;
+  }
+
+  async function loadCards() {
+    const data = await authFetch("/.netlify/functions/cards", { method: "GET" });
+    state.cards = data.records;
+    state.cardsLoaded = true;
   }
 
   /* ---------------- auth screens ---------------- */
@@ -305,7 +317,7 @@
           <p class="kicker">Studio</p>
           <h1>Rose's dashboard</h1>
         </div>
-        <button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : state.tab === "blog" ? "Write a post" : "Add a painting"}</button>
+        <button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : state.tab === "blog" ? "Write a post" : state.tab === "cards" ? "Add a card" : "Add a painting"}</button>
       </div>
 
       ${state.recap ? recapBannerHtml(state.recap) : ""}
@@ -321,6 +333,7 @@
 
       <div class="tabs">
         <button class="tab-btn ${state.tab === "works" ? "on" : ""}" id="tabWorks">Paintings</button>
+        <button class="tab-btn ${state.tab === "cards" ? "on" : ""}" id="tabCards">Cards</button>
         <button class="tab-btn ${state.tab === "lessons" ? "on" : ""}" id="tabLessons">Lessons</button>
         <button class="tab-btn ${state.tab === "blog" ? "on" : ""}" id="tabBlog">Journal</button>
         <button class="tab-btn ${state.tab === "enquiries" ? "on" : ""}" id="tabEnquiries">Enquiries</button>
@@ -341,6 +354,10 @@
         state.blogDraft = { id: null, title: "", excerpt: "", body: "", imageUrl: "", status: "Draft", generated: false };
         state.blogDraftIsNew = true;
         state.savedNote = "Write your post, then save it as a draft or publish straight away.";
+      } else if (state.tab === "cards") {
+        state.cardDraft = { id: null, title: "", type: "Printed", price: 3, imageUrl: "", status: "Available" };
+        state.cardDraftIsNew = true;
+        state.savedNote = "Drop a photo in, give it a title, then save.";
       } else {
         state.draft = { id: null, title: "", price: 0, size: "", description: "", story: "", category: "", status: "Available", imageUrl: "" };
         state.draftIsNew = true;
@@ -370,6 +387,16 @@
         if (state.tab === "blog") renderTabBody();
       }
     });
+    document.getElementById("tabCards").addEventListener("click", async () => {
+      state.tab = "cards";
+      renderDashboard();
+      if (!state.cardsLoaded) {
+        const body = document.getElementById("tabBody");
+        body.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--muted)">Loading cards…</div>`;
+        try { await loadCards(); } catch (err) { body.innerHTML = `<p class="form-error">${esc(err.message)}</p>`; return; }
+        if (state.tab === "cards") renderTabBody();
+      }
+    });
     document.getElementById("tabEnquiries").addEventListener("click", async () => {
       state.tab = "enquiries";
       renderDashboard();
@@ -396,6 +423,9 @@
     } else if (state.tab === "blog") {
       body.innerHTML = blogTabHtml();
       bindBlogTab();
+    } else if (state.tab === "cards") {
+      body.innerHTML = cardsTabHtml();
+      bindCardsTab();
     } else {
       body.innerHTML = enquiriesTabHtml();
       bindEnquiriesTab();
@@ -987,6 +1017,207 @@
     }
   }
 
+  /* ---------------- Cards tab ---------------- */
+
+  function cardsTabHtml() {
+    const draft = state.cardDraft;
+    return `
+      <div class="dash-grid">
+        <div>
+          <p class="row-hint">Drag a row by the handle to change the order cards appear in the shop.</p>
+          <div class="rows" id="cardRows">
+            ${state.cards.length ? state.cards.map(cardRowHtml).join("") : `<p style="color:var(--muted);font-size:14px">No cards yet — add your first design.</p>`}
+          </div>
+        </div>
+        <div class="edit-card">
+          ${draft ? cardEditFormHtml(draft) : `<p style="color:var(--muted);font-size:14px">Select a card to edit, or add a new one.</p>`}
+        </div>
+      </div>`;
+  }
+
+  function cardRowHtml(c, i) {
+    const pillClass = c.status === "Sold" ? "pill-sold" : "pill-available";
+    const editing = state.cardDraft && state.cardDraft.id === c.id;
+    const dragOver = state.cardDragOver === i ? "over" : "";
+    return `
+      <div class="admin-row ${editing ? "editing" : ""} ${dragOver}" draggable="true" data-card-row="${i}">
+        <span class="drag-handle">⠿</span>
+        <img src="${esc(thumbFor(c.imageUrl))}" alt="">
+        <div class="info">
+          <p class="t">${esc(c.title || "Untitled")}</p>
+          <p class="m">${money(c.price)} · ${esc(c.type)}</p>
+        </div>
+        <span class="pill ${pillClass}">${esc(c.status)}</span>
+        <button class="btn-outline" data-edit-card="${esc(c.id)}">Edit</button>
+      </div>`;
+  }
+
+  function cardEditFormHtml(draft) {
+    return `
+      <p class="kicker">${state.cardDraftIsNew ? "Card details" : "Editing card"}</p>
+      <div class="upload-row">
+        <img class="upload-thumb" id="cardUploadThumb" src="${draft.imageUrl ? esc(thumbFor(draft.imageUrl)) : ""}" style="${draft.imageUrl ? "" : "visibility:hidden"}">
+        <div class="upload-drop">
+          <p style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-soft)">PHOTO</p>
+          <button type="button" id="cardUploadBtn">${draft.imageUrl ? "Replace photo" : "Add a photo"}</button>
+          <p style="margin:0;font-size:12px;color:var(--muted)">JPG from your phone is fine</p>
+        </div>
+      </div>
+      <label class="form-field" style="margin-bottom:12px">Title
+        <input type="text" id="cTitle" value="${esc(draft.title)}">
+      </label>
+      <label class="form-field" style="margin-bottom:12px">Price (£)
+        <input type="number" id="cPrice" value="${draft.price}">
+      </label>
+      <div style="margin-bottom:14px">
+        <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Type</p>
+        <div class="status-buttons">
+          <button class="chip ${draft.type === "Hand-painted" ? "on" : ""}" data-card-type="Hand-painted">Hand-painted</button>
+          <button class="chip ${draft.type === "Printed" ? "on" : ""}" data-card-type="Printed">Printed</button>
+        </div>
+      </div>
+      <div style="margin-bottom:6px">
+        <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Status</p>
+        <div class="status-buttons">
+          <button class="chip ${draft.status === "Available" ? "on" : ""}" data-card-status="Available">Available</button>
+          <button class="chip ${draft.status === "Sold" ? "on" : ""}" data-card-status="Sold">Sold out</button>
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn" id="saveCardBtn" style="flex:1">Save</button>
+        <button class="btn-outline" id="cancelCardBtn">Cancel</button>
+        ${!state.cardDraftIsNew ? `<button class="btn-text" id="deleteCardBtn" style="color:#B4403A">Delete</button>` : ""}
+      </div>
+      <p class="form-msg" style="color:var(--muted)">${esc(state.savedNote)}</p>
+      ${state.errorMsg ? `<p class="form-error">${esc(state.errorMsg)}</p>` : ""}
+    `;
+  }
+
+  function bindCardsTab() {
+    const rows = document.getElementById("cardRows");
+    if (rows) {
+      rows.querySelectorAll(".admin-row").forEach((rowEl) => {
+        const i = Number(rowEl.getAttribute("data-card-row"));
+        rowEl.addEventListener("dragstart", () => { state.cardDragFrom = i; rowEl.classList.add("dragging"); });
+        rowEl.addEventListener("dragend", () => { rowEl.classList.remove("dragging"); state.cardDragFrom = null; state.cardDragOver = null; renderTabBody(); });
+        rowEl.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          if (state.cardDragOver !== i) { state.cardDragOver = i; renderTabBody(); }
+        });
+        rowEl.addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (state.cardDragFrom !== null && state.cardDragFrom !== i) reorderCards(state.cardDragFrom, i);
+          state.cardDragFrom = null; state.cardDragOver = null;
+        });
+      });
+    }
+
+    document.querySelectorAll("[data-edit-card]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const c = state.cards.find((x) => x.id === btn.getAttribute("data-edit-card"));
+        if (!c) return;
+        state.cardDraft = Object.assign({}, c);
+        state.cardDraftIsNew = false;
+        state.savedNote = `Editing "${c.title}".`;
+        state.errorMsg = "";
+        renderTabBody();
+      });
+    });
+
+    if (!state.cardDraft) return;
+
+    document.getElementById("cardUploadBtn").addEventListener("click", () => openUploadWidget((url) => { state.cardDraft.imageUrl = url; }));
+    document.querySelectorAll("[data-card-type]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.cardDraft.type = btn.getAttribute("data-card-type"); renderTabBody(); });
+    });
+    document.querySelectorAll("[data-card-status]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.cardDraft.status = btn.getAttribute("data-card-status"); renderTabBody(); });
+    });
+    document.getElementById("saveCardBtn").addEventListener("click", saveCardDraft);
+    document.getElementById("cancelCardBtn").addEventListener("click", () => {
+      state.cardDraft = null;
+      state.savedNote = "Edit discarded.";
+      renderTabBody();
+    });
+    const delBtn = document.getElementById("deleteCardBtn");
+    if (delBtn) delBtn.addEventListener("click", deleteCardDraft);
+
+    ["cTitle", "cPrice"].forEach((id) => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", () => {
+        state.cardDraft.title = document.getElementById("cTitle").value;
+        state.cardDraft.price = Number(document.getElementById("cPrice").value) || 0;
+      });
+    });
+  }
+
+  async function saveCardDraft() {
+    const d = state.cardDraft;
+    if (!d.title.trim()) {
+      state.errorMsg = "Give the card a title before saving.";
+      renderTabBody();
+      return;
+    }
+    state.errorMsg = "";
+    const saveBtn = document.getElementById("saveCardBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      if (state.cardDraftIsNew) {
+        const sortOrder = state.cards.reduce((max, c) => Math.max(max, c.sortOrder), 0) + 1;
+        const data = await authFetch("/.netlify/functions/cards", {
+          method: "POST",
+          body: JSON.stringify(Object.assign({}, d, { sortOrder }))
+        });
+        state.cards.push(data.record);
+      } else {
+        const data = await authFetch("/.netlify/functions/cards", {
+          method: "PATCH",
+          body: JSON.stringify(d)
+        });
+        state.cards = state.cards.map((c) => (c.id === data.record.id ? data.record : c));
+      }
+      state.savedNote = `Saved. "${d.title}" is now ${d.status.toLowerCase()} in the shop.`;
+      state.cardDraft = null;
+      renderDashboard();
+    } catch (err) {
+      state.errorMsg = err.message;
+      renderTabBody();
+    }
+  }
+
+  async function deleteCardDraft() {
+    const d = state.cardDraft;
+    if (!confirm(`Remove "${d.title}" from the shop for good?`)) return;
+    try {
+      await authFetch(`/.netlify/functions/cards?id=${encodeURIComponent(d.id)}`, { method: "DELETE" });
+      state.cards = state.cards.filter((c) => c.id !== d.id);
+      state.cardDraft = null;
+      state.savedNote = "Card removed.";
+      renderDashboard();
+    } catch (err) {
+      state.errorMsg = err.message;
+      renderTabBody();
+    }
+  }
+
+  function reorderCards(from, to) {
+    const list = state.cards.slice();
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    list.forEach((c, i) => { c.sortOrder = i + 1; });
+    state.cards = list;
+    renderTabBody();
+    authFetch("/.netlify/functions/cards", {
+      method: "PATCH",
+      body: JSON.stringify({ reorder: list.map((c) => ({ id: c.id, sortOrder: c.sortOrder })) })
+    }).catch(async (err) => {
+      state.errorMsg = "Couldn't save the new order: " + err.message;
+      try { await loadCards(); } catch (e) { /* ignore */ }
+      renderDashboard();
+    });
+  }
+
   /* ---------------- Enquiries tab ---------------- */
 
   function enquiriesTabHtml() {
@@ -1043,6 +1274,7 @@
     state.enquiriesLoaded = false;
     state.lessonsLoaded = false;
     state.blogPostsLoaded = false;
+    state.cardsLoaded = false;
     state.errorMsg = "";
     renderApp();
   }
@@ -1057,6 +1289,8 @@
     state.lessonsLoaded = false;
     state.blogPosts = [];
     state.blogPostsLoaded = false;
+    state.cards = [];
+    state.cardsLoaded = false;
     renderLoginGate();
   });
 

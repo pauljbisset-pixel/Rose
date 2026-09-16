@@ -8,6 +8,7 @@ const PAINTINGS_TABLE = "Paintings";
 const ENQUIRIES_TABLE = "Enquiries";
 const LESSONS_TABLE = "Lessons";
 const BLOG_TABLE = "Blog";
+const CARDS_TABLE = "Cards";
 
 function baseId() {
   const id = process.env.AIRTABLE_BASE_ID;
@@ -142,6 +143,7 @@ module.exports = {
   ENQUIRIES_TABLE,
   LESSONS_TABLE,
   BLOG_TABLE,
+  CARDS_TABLE,
   airtableRequest,
   airtableListAll,
   allowedEmails,

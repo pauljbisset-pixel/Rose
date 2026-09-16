@@ -92,6 +92,23 @@ You don't need to add rows by hand — the dashboard's Journal tab
 Published first** — that's enforced by the query itself, not just a UI
 convention, so there's no way for an unreviewed draft to leak out.
 
+### Table: `Cards`
+
+Rose's hand-painted and printed notecards — a full catalog, browsable at
+`shop.html#/cards`, same shape as `Paintings`.
+
+| Field name | Type | Notes |
+|---|---|---|
+| `Title`      | Single line text | |
+| `Type`       | Single select: `Hand-painted`, `Printed` | Hand-painted cards are one-off originals; Printed ones are reproductions Rose can restock. |
+| `Price`      | Number (currency, £, 2 decimals) | Defaults to £3 for new rows. |
+| `Image URL`  | Single line text (or "URL" type) | Filled in by the dashboard's photo upload, same as Paintings. |
+| `Status`     | Single select: `Available`, `Sold` | A Sold card still shows in the shop with a badge rather than vanishing — Rose can flip a Printed design straight back to Available once she's restocked, without re-adding it. |
+| `Sort Order` | Number | Drag-to-reorder in the dashboard writes this automatically — you shouldn't need to touch it by hand. |
+
+You don't need to add rows by hand — the dashboard's Cards tab ("+ Add a
+card") creates these.
+
 ### Two API tokens (Account → Developer hub → Personal access tokens)
 
 Create **two separate tokens** — don't reuse one, since one of them ends up
@@ -106,10 +123,10 @@ in the browser and must not be able to write anything:
    - Access: only this one base
 
 Both tokens are scoped to the **whole base**, not individual tables, so
-adding the `Lessons` table above doesn't need either token touching again
-— it's covered automatically. (If Airtable's token editor shows a list of
-specific tables rather than "all tables" for yours, just add `Lessons` to
-that list on both tokens.)
+adding new tables like `Lessons`, `Blog`, or `Cards` above doesn't need
+either token touching again — it's covered automatically. (If Airtable's
+token editor shows a list of specific tables rather than "all tables" for
+yours, just add the new table to that list on both tokens.)
 
 Send me:
 - The **base ID** (starts `app…` — visible in the base's API docs, or in
@@ -385,6 +402,13 @@ needed on your end.
   §5) alongside, or instead of, the original. Visitors can also heart a
   painting (no login needed), see a "New" badge on recently added work,
   and read a short personal story Rose can add per painting.
+- **`shop.html#/cards`** — a full Cards catalog, browsable the same way
+  as the paintings grid, with a Hand-painted/Printed filter. Each design
+  can be added to the basket in a quantity (a stepper replaces the "Add
+  to basket" button once one's in the basket) — the only place on the
+  site where a visitor orders more than one of the same thing.
+- **`netlify/functions/cards.js`** — session-gated CRUD for the Cards
+  table, same shape as `paintings.js`/`lessons.js`/`blog.js`.
 - **`dashboard.html`** — Rose's private admin, linked quietly from the
   homepage footer ("Studio") rather than the main nav. Own magic-link
   login (email in, click the link, signed in for 30 days — see §4),
@@ -393,7 +417,9 @@ needed on your end.
   Available/Reserved/Sold status, an optional Story note, delete),
   a new **Lessons tab** (add a session's date/time/capacity/price,
   update how many are Booked as she confirms them, mark Cancelled,
-  delete — sessions list soonest-first automatically), and an
+  delete — sessions list soonest-first automatically), a **Cards tab**
+  (same drag-to-reorder/photo-upload/delete pattern as Paintings, with
+  a Hand-painted/Printed type and Available/Sold status), and an
   Enquiries tab (reads what visitors submit, lets Rose mark
   New/Contacted/Closed). If she's been away 2+ days, the first thing she
   sees on her next visit is a "Welcome back" recap — new enquiries,
@@ -533,3 +559,25 @@ needed on your end.
   their Story notes, the season, a topic jotted down in advance) so it
   doesn't read as generic filler. Building that next once the detailed
   brief for it arrives.
+- **Cards are a full catalog, not a single generic listing.** Rose sells
+  both hand-painted originals and printed reproductions of her cards
+  (seen at exhibitions, £3 each) — she chose giving each design its own
+  browsable listing (photo, title, price, type) over a simpler "order
+  a mixed pack" approach, matching how the paintings shop already works.
+  New `Cards` Airtable table, dashboard tab, and public `#/cards` grid,
+  same pattern as Paintings throughout.
+- **The basket learned quantities, only for Cards.** Every other basket
+  line (an original, a print) is inherently one-of-a-kind, so the basket
+  never needed a quantity before now — it was strictly "in or out." Cards
+  are the first product a visitor would plausibly want several of (a
+  handful of the same design to send), so basket lines now carry a `qty`,
+  with a +/− stepper shown only where it's relevant. Decrementing to zero
+  removes the line, same as the old "Remove" button did.
+- **`Price` defaults to £3 for a new card row** (both in Airtable, via
+  the dashboard's "+ Add a card," and as the fallback if a row's `Price`
+  field is ever empty) — matching the price on Rose's own exhibition
+  record sheet. Still fully editable per design.
+- **A Sold card stays visible with a badge, same as Sold paintings**,
+  rather than disappearing — useful since a Printed design can be
+  restocked and flipped straight back to Available, without Rose having
+  to re-add it from scratch.

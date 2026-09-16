@@ -126,10 +126,35 @@
     return records.map(normalizeBlogPost).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
+  function normalizeCard(record) {
+    const f = record.fields;
+    return {
+      id: record.id,
+      title: f.Title || "Untitled",
+      type: f.Type || "Printed",
+      price: typeof f.Price === "number" ? f.Price : 3,
+      imageUrl: f["Image URL"] || "",
+      status: f.Status || "Available",
+      sortOrder: typeof f["Sort Order"] === "number" ? f["Sort Order"] : 0
+    };
+  }
+
+  // Fetches every card regardless of status — a Sold one still shows with
+  // a badge (same as paintings) rather than vanishing, since Rose can
+  // print more of a Printed design and just flip it back to Available.
+  async function fetchCards() {
+    const records = await fetchAllRecords(cfg.cardsTable, {
+      "sort[0][field]": "Sort Order",
+      "sort[0][direction]": "asc"
+    });
+    return records.map(normalizeCard).sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
   window.RoseAirtable = {
     fetchPaintings,
     fetchLessons,
     fetchBlogPosts,
+    fetchCards,
     thumbUrl,
     fullUrl
   };
