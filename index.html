@@ -449,6 +449,21 @@
 <script>
 const CFG = window.ROSE_CONFIG;
 
+/* The gallery grid and lesson dates load asynchronously from Airtable,
+   after the browser has already performed its one-time jump to any
+   #hash in the URL. That async content lands above #lessons/#commissions/
+   #contact, so the page grows taller under an anchor link arriving from
+   another page (e.g. shop.html#/cards linking to index.html#contact) and
+   the target ends up in the wrong spot. Once both loads have settled,
+   re-jump to the original hash so the section lands correctly either way. */
+const _initialHash = window.location.hash;
+let _paintingsSettled = false, _lessonsSettled = false;
+function _restoreHashScroll() {
+  if (!_paintingsSettled || !_lessonsSettled || !_initialHash) return;
+  const el = document.getElementById(_initialHash.slice(1));
+  if (el) requestAnimationFrame(() => el.scrollIntoView({ block: "start" }));
+}
+
 /* ===============================================================
    CONTACT DETAILS — the email address itself lives in js/config.js
    (CFG.contact.email), shared with the shop — the contact form below
@@ -491,7 +506,7 @@ RoseAirtable.fetchPaintings().then(paintings => {
 }).catch(err => {
   console.warn('Gallery failed to load:', err);
   grid.innerHTML = '<p style="color:var(--muted)">The gallery couldn\'t be loaded right now — see the <a href="shop.html">shop</a> instead.</p>';
-});
+}).finally(() => { _paintingsSettled = true; _restoreHashScroll(); });
 
 /* lightbox */
 const lb=document.getElementById('lb'), lbImg=document.getElementById('lbImg'), lbCap=document.getElementById('lbCap');
@@ -706,7 +721,7 @@ RoseAirtable.fetchLessons().then(lessons=>{
   console.warn('Lessons failed to load:', err);
   lessonDates.innerHTML='<p style="color:var(--muted)">Session dates couldn\'t be loaded right now — message Rose below and she\'ll let you know what\'s on.</p>';
   lessonDateField.style.display='none';
-});
+}).finally(() => { _lessonsSettled = true; _restoreHashScroll(); });
 
 lessonForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
