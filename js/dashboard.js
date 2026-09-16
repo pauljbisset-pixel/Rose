@@ -24,11 +24,15 @@
     enquiriesLoaded: false,
     lessons: [],
     lessonsLoaded: false,
+    blogPosts: [],
+    blogPostsLoaded: false,
     tab: "works",
     draft: null,
     draftIsNew: false,
     lessonDraft: null,
     lessonDraftIsNew: false,
+    blogDraft: null,
+    blogDraftIsNew: false,
     dragFrom: null,
     dragOver: null,
     savedNote: "Changes here update the shop straight away. Nothing needs code.",
@@ -158,6 +162,12 @@
     const data = await authFetch("/.netlify/functions/lessons", { method: "GET" });
     state.lessons = data.records;
     state.lessonsLoaded = true;
+  }
+
+  async function loadBlogPosts() {
+    const data = await authFetch("/.netlify/functions/blog", { method: "GET" });
+    state.blogPosts = data.records;
+    state.blogPostsLoaded = true;
   }
 
   /* ---------------- auth screens ---------------- */
@@ -295,7 +305,7 @@
           <p class="kicker">Studio</p>
           <h1>Rose's dashboard</h1>
         </div>
-        <button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : "Add a painting"}</button>
+        <button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : state.tab === "blog" ? "Write a post" : "Add a painting"}</button>
       </div>
 
       ${state.recap ? recapBannerHtml(state.recap) : ""}
@@ -312,6 +322,7 @@
       <div class="tabs">
         <button class="tab-btn ${state.tab === "works" ? "on" : ""}" id="tabWorks">Paintings</button>
         <button class="tab-btn ${state.tab === "lessons" ? "on" : ""}" id="tabLessons">Lessons</button>
+        <button class="tab-btn ${state.tab === "blog" ? "on" : ""}" id="tabBlog">Journal</button>
         <button class="tab-btn ${state.tab === "enquiries" ? "on" : ""}" id="tabEnquiries">Enquiries</button>
       </div>
 
@@ -326,6 +337,10 @@
         state.lessonDraft = { id: null, date: "", price: 45, capacity: 6, booked: 0, status: "Open", location: "", notes: "" };
         state.lessonDraftIsNew = true;
         state.savedNote = "Set a date and capacity, then save.";
+      } else if (state.tab === "blog") {
+        state.blogDraft = { id: null, title: "", excerpt: "", body: "", imageUrl: "", status: "Draft", generated: false };
+        state.blogDraftIsNew = true;
+        state.savedNote = "Write your post, then save it as a draft or publish straight away.";
       } else {
         state.draft = { id: null, title: "", price: 0, size: "", description: "", story: "", category: "", status: "Available", imageUrl: "" };
         state.draftIsNew = true;
@@ -343,6 +358,16 @@
         body.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--muted)">Loading lessons…</div>`;
         try { await loadLessons(); } catch (err) { body.innerHTML = `<p class="form-error">${esc(err.message)}</p>`; return; }
         if (state.tab === "lessons") renderTabBody();
+      }
+    });
+    document.getElementById("tabBlog").addEventListener("click", async () => {
+      state.tab = "blog";
+      renderDashboard();
+      if (!state.blogPostsLoaded) {
+        const body = document.getElementById("tabBody");
+        body.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--muted)">Loading posts…</div>`;
+        try { await loadBlogPosts(); } catch (err) { body.innerHTML = `<p class="form-error">${esc(err.message)}</p>`; return; }
+        if (state.tab === "blog") renderTabBody();
       }
     });
     document.getElementById("tabEnquiries").addEventListener("click", async () => {
@@ -368,6 +393,9 @@
     } else if (state.tab === "lessons") {
       body.innerHTML = lessonsTabHtml();
       bindLessonsTab();
+    } else if (state.tab === "blog") {
+      body.innerHTML = blogTabHtml();
+      bindBlogTab();
     } else {
       body.innerHTML = enquiriesTabHtml();
       bindEnquiriesTab();
@@ -494,7 +522,7 @@
 
     if (!state.draft) return;
 
-    document.getElementById("uploadBtn").addEventListener("click", openUploadWidget);
+    document.getElementById("uploadBtn").addEventListener("click", () => openUploadWidget((url) => { state.draft.imageUrl = url; }));
     document.querySelectorAll("[data-status]").forEach((btn) => {
       btn.addEventListener("click", () => { state.draft.status = btn.getAttribute("data-status"); renderTabBody(); });
     });
@@ -519,7 +547,7 @@
     });
   }
 
-  function openUploadWidget() {
+  function openUploadWidget(onSuccess) {
     if (!window.cloudinary) {
       state.errorMsg = "The upload widget didn't load — check your connection and try again.";
       renderTabBody();
@@ -542,7 +570,7 @@
       (error, result) => {
         if (error) { console.warn(error); return; }
         if (result && result.event === "success") {
-          state.draft.imageUrl = result.info.secure_url;
+          onSuccess(result.info.secure_url);
           renderTabBody();
         }
       }
@@ -783,6 +811,182 @@
     }
   }
 
+  /* ---------------- Blog / Journal tab ---------------- */
+
+  function formatBlogDate(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function blogTabHtml() {
+    const draft = state.blogDraft;
+    return `
+      <div class="dash-grid">
+        <div>
+          <p class="row-hint">Posts are listed newest first. Only Published posts show on the public journal — Drafts (including anything written automatically) stay hidden until you publish them.</p>
+          <div class="rows" id="blogRows">
+            ${state.blogPosts.length ? state.blogPosts.map(blogRowHtml).join("") : `<p style="color:var(--muted);font-size:14px">No posts yet.</p>`}
+          </div>
+        </div>
+        <div class="edit-card">
+          ${draft ? blogEditFormHtml(draft) : `<p style="color:var(--muted);font-size:14px">Select a post to edit, or write a new one.</p>`}
+        </div>
+      </div>`;
+  }
+
+  function blogRowHtml(p) {
+    const pillClass = p.status === "Published" ? "pill-available" : "pill-reserved";
+    const editing = state.blogDraft && state.blogDraft.id === p.id;
+    return `
+      <div class="admin-row ${editing ? "editing" : ""}">
+        <div class="info">
+          <p class="t">${esc(p.title || "Untitled")}${p.generated ? ` <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">· AI draft</span>` : ""}</p>
+          <p class="m">${esc(formatBlogDate(p.createdAt))}</p>
+        </div>
+        <span class="pill ${pillClass}">${esc(p.status)}</span>
+        ${p.status === "Draft" ? `<button class="btn-text" data-quick-publish="${esc(p.id)}">Publish</button>` : ""}
+        <button class="btn-outline" data-edit-blog="${esc(p.id)}">Edit</button>
+      </div>`;
+  }
+
+  function blogEditFormHtml(draft) {
+    return `
+      <p class="kicker">${state.blogDraftIsNew ? "New post" : "Editing post"}</p>
+      <div class="upload-row">
+        <img class="upload-thumb" id="blogUploadThumb" src="${draft.imageUrl ? esc(thumbFor(draft.imageUrl)) : ""}" style="${draft.imageUrl ? "" : "visibility:hidden"}">
+        <div class="upload-drop">
+          <p style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-soft)">COVER PHOTO</p>
+          <button type="button" id="blogUploadBtn">${draft.imageUrl ? "Replace photo" : "Add a photo"}</button>
+          <p style="margin:0;font-size:12px;color:var(--muted)">Optional</p>
+        </div>
+      </div>
+      <label class="form-field" style="margin-bottom:12px">Title
+        <input type="text" id="bTitle" value="${esc(draft.title)}">
+      </label>
+      <label class="form-field" style="margin-bottom:12px">Excerpt <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">optional — shown on the journal list; the start of the post is used if left blank</span>
+        <textarea id="bExcerpt" rows="2">${esc(draft.excerpt)}</textarea>
+      </label>
+      <label class="form-field" style="margin-bottom:14px">Post
+        <textarea id="bBody" rows="10">${esc(draft.body)}</textarea>
+      </label>
+      ${draft.generated ? `<p class="form-msg" style="color:var(--sea);margin-bottom:10px">✦ Drafted automatically — read it over before publishing.</p>` : ""}
+      <div style="margin-bottom:6px">
+        <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Status</p>
+        <div class="status-buttons">
+          <button class="chip ${draft.status === "Draft" ? "on" : ""}" data-blog-status="Draft">Draft</button>
+          <button class="chip ${draft.status === "Published" ? "on" : ""}" data-blog-status="Published">Published</button>
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn" id="saveBlogBtn" style="flex:1">Save</button>
+        <button class="btn-outline" id="cancelBlogBtn">Cancel</button>
+        ${!state.blogDraftIsNew ? `<button class="btn-text" id="deleteBlogBtn" style="color:#B4403A">Delete</button>` : ""}
+      </div>
+      <p class="form-msg" style="color:var(--muted)">${esc(state.savedNote)}</p>
+      ${state.errorMsg ? `<p class="form-error">${esc(state.errorMsg)}</p>` : ""}
+    `;
+  }
+
+  function bindBlogTab() {
+    document.querySelectorAll("[data-edit-blog]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = state.blogPosts.find((x) => x.id === btn.getAttribute("data-edit-blog"));
+        if (!p) return;
+        state.blogDraft = Object.assign({}, p);
+        state.blogDraftIsNew = false;
+        state.savedNote = `Editing "${p.title}".`;
+        state.errorMsg = "";
+        renderTabBody();
+      });
+    });
+
+    document.querySelectorAll("[data-quick-publish]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-quick-publish");
+        try {
+          const data = await authFetch("/.netlify/functions/blog", { method: "PATCH", body: JSON.stringify({ id, status: "Published" }) });
+          state.blogPosts = state.blogPosts.map((p) => (p.id === id ? data.record : p));
+          renderTabBody();
+        } catch (err) {
+          alert("Couldn't publish that post: " + err.message);
+          renderTabBody();
+        }
+      });
+    });
+
+    if (!state.blogDraft) return;
+
+    document.getElementById("blogUploadBtn").addEventListener("click", () => openUploadWidget((url) => { state.blogDraft.imageUrl = url; }));
+    document.querySelectorAll("[data-blog-status]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.blogDraft.status = btn.getAttribute("data-blog-status"); renderTabBody(); });
+    });
+    document.getElementById("saveBlogBtn").addEventListener("click", saveBlogDraft);
+    document.getElementById("cancelBlogBtn").addEventListener("click", () => {
+      state.blogDraft = null;
+      state.savedNote = "Edit discarded.";
+      renderTabBody();
+    });
+    const delBtn = document.getElementById("deleteBlogBtn");
+    if (delBtn) delBtn.addEventListener("click", deleteBlogDraft);
+
+    ["bTitle", "bExcerpt", "bBody"].forEach((id) => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", () => {
+        state.blogDraft.title = document.getElementById("bTitle").value;
+        state.blogDraft.excerpt = document.getElementById("bExcerpt").value;
+        state.blogDraft.body = document.getElementById("bBody").value;
+      });
+    });
+  }
+
+  async function saveBlogDraft() {
+    const d = state.blogDraft;
+    if (!d.title.trim()) {
+      state.errorMsg = "Give the post a title before saving.";
+      renderTabBody();
+      return;
+    }
+    if (!d.body.trim()) {
+      state.errorMsg = "The post needs some content before saving.";
+      renderTabBody();
+      return;
+    }
+    state.errorMsg = "";
+    const saveBtn = document.getElementById("saveBlogBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      if (state.blogDraftIsNew) {
+        const data = await authFetch("/.netlify/functions/blog", { method: "POST", body: JSON.stringify(d) });
+        state.blogPosts.unshift(data.record);
+      } else {
+        const data = await authFetch("/.netlify/functions/blog", { method: "PATCH", body: JSON.stringify(d) });
+        state.blogPosts = state.blogPosts.map((p) => (p.id === data.record.id ? data.record : p));
+      }
+      state.savedNote = `Saved. "${d.title}" is ${d.status === "Published" ? "live on the journal" : "still a draft"}.`;
+      state.blogDraft = null;
+      renderDashboard();
+    } catch (err) {
+      state.errorMsg = err.message;
+      renderTabBody();
+    }
+  }
+
+  async function deleteBlogDraft() {
+    const d = state.blogDraft;
+    if (!confirm(`Delete "${d.title}" for good?`)) return;
+    try {
+      await authFetch(`/.netlify/functions/blog?id=${encodeURIComponent(d.id)}`, { method: "DELETE" });
+      state.blogPosts = state.blogPosts.filter((p) => p.id !== d.id);
+      state.blogDraft = null;
+      state.savedNote = "Post deleted.";
+      renderDashboard();
+    } catch (err) {
+      state.errorMsg = err.message;
+      renderTabBody();
+    }
+  }
+
   /* ---------------- Enquiries tab ---------------- */
 
   function enquiriesTabHtml() {
@@ -838,6 +1042,7 @@
     state.paintingsLoaded = false;
     state.enquiriesLoaded = false;
     state.lessonsLoaded = false;
+    state.blogPostsLoaded = false;
     state.errorMsg = "";
     renderApp();
   }
@@ -850,6 +1055,8 @@
     state.enquiriesLoaded = false;
     state.lessons = [];
     state.lessonsLoaded = false;
+    state.blogPosts = [];
+    state.blogPostsLoaded = false;
     renderLoginGate();
   });
 

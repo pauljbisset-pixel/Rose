@@ -135,6 +135,17 @@ header.nav .links a{font-size:11px;letter-spacing:.18em;text-transform:uppercase
 .story-label{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sea)}
 .story-text{margin:0;font-family:var(--display);font-style:italic;font-size:16px;line-height:1.65;color:var(--ink-soft);white-space:pre-line}
 
+/* ---------- journal ---------- */
+.journal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:clamp(24px,3vw,40px);padding:clamp(32px,5vw,56px) 0 clamp(48px,8vw,88px)}
+.journal-card{display:block;cursor:pointer;color:inherit}
+.journal-card-figure{margin:0 0 16px;background:var(--sand);overflow:hidden}
+.journal-card-figure img{width:100%;aspect-ratio:4/3;object-fit:cover;transition:transform .5s}
+.journal-card:hover .journal-card-figure img{transform:scale(1.04)}
+.journal-card-date{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.journal-card-title{margin:0 0 10px;font-family:var(--display);font-weight:400;font-size:22px;line-height:1.25;color:var(--ink)}
+.journal-card-excerpt{margin:0 0 12px;color:var(--ink-soft);font-size:14px;line-height:1.7}
+.journal-body{color:var(--ink-soft);font-size:17px;line-height:1.85;white-space:pre-line;max-width:68ch}
+
 /* ---------- basket / checkout ---------- */
 .commerce-section{max-width:1000px;margin:0 auto;padding:clamp(24px,5vw,52px) var(--pad) clamp(48px,8vw,88px)}
 .commerce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(24px,4vw,48px);align-items:start}

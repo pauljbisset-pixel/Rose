@@ -20,6 +20,7 @@ window.ROSE_CONFIG = {
     paintingsTable: "Paintings",
     enquiriesTable: "Enquiries",
     lessonsTable: "Lessons",
+    blogTable: "Blog",
     // Personal access token scoped to data.records:read on this base only.
     // Filled in at deploy time by scripts/build-config.js from Netlify env
     // vars — never edit this literal value or commit a real token here.

@@ -103,9 +103,33 @@
     return records.map(normalizeLesson);
   }
 
+  function normalizeBlogPost(record) {
+    const f = record.fields;
+    return {
+      id: record.id,
+      title: f.Title || "Untitled",
+      excerpt: f.Excerpt || "",
+      body: f.Body || "",
+      imageUrl: f["Image URL"] || "",
+      createdAt: record.createdTime || ""
+    };
+  }
+
+  // Filtered server-side to Status = Published — unlike paintings/lessons,
+  // a Draft post (an AI-generated rough cut Rose hasn't reviewed yet) has
+  // no public value and shouldn't be fetchable even unlinked, so this
+  // never falls back to fetch-all-then-filter like the other tables do.
+  async function fetchBlogPosts() {
+    const records = await fetchAllRecords(cfg.blogTable, {
+      filterByFormula: "{Status}='Published'"
+    });
+    return records.map(normalizeBlogPost).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
   window.RoseAirtable = {
     fetchPaintings,
     fetchLessons,
+    fetchBlogPosts,
     thumbUrl,
     fullUrl
   };

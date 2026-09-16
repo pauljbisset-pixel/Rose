@@ -72,6 +72,26 @@ For the "Paint with Rose" art lesson booking section on the homepage.
 You don't need to add rows by hand here either — the dashboard's Lessons
 tab (its own "+ Add a lesson" button, alongside Paintings) creates these.
 
+### Table: `Blog`
+
+For "The Journal" — Rose's blog, on its own page (`blog.html`).
+
+| Field name | Type | Notes |
+|---|---|---|
+| `Title`      | Single line text | |
+| `Excerpt`    | Long text | Optional — the teaser shown on the journal list. If left blank, the start of the post is used instead. |
+| `Body`       | Long text | The post itself. Plain text with blank lines between paragraphs — no markdown/HTML needed, the site handles line breaks automatically. |
+| `Image URL`  | Single line text (or "URL" type) | Optional cover photo — filled in by the dashboard's photo upload, same as Paintings |
+| `Status`     | Single select: `Draft`, `Published` | **Only `Published` posts are ever fetched by the public site** — the read-only token's query filters on this server-side, so a Draft is never reachable even by guessing a link. Default new records to `Draft`. |
+| `Generated`  | Checkbox | Optional — purely informational, flags a post that was written automatically so Rose can tell at a glance it hasn't been read over yet. Leave unticked for anything she writes herself. |
+
+You don't need to add rows by hand — the dashboard's Journal tab
+("+ Write a post") creates these, whether written by Rose directly or
+(once wired up) generated automatically as a Draft for her to review.
+**No post reaches the public site without a human flipping it to
+Published first** — that's enforced by the query itself, not just a UI
+convention, so there's no way for an unreviewed draft to leak out.
+
 ### Two API tokens (Account → Developer hub → Personal access tokens)
 
 Create **two separate tokens** — don't reuse one, since one of them ends up
@@ -344,6 +364,20 @@ needed on your end.
   Lessons table, mirroring `paintings.js` exactly. The public homepage
   reads Lessons directly with the read-only Airtable token (like
   paintings/prints), never through this function.
+- **`blog.html` + `js/blog.js`** — "The Journal," a new page with a
+  post list and individual post pages, hash-routed like the shop.
+  Reads only `Status = Published` posts, filtered server-side (not
+  just hidden in the UI) — see §1. Linked from the main nav on the
+  homepage and shop.
+- **`netlify/functions/blog.js`** — session-gated CRUD for the Blog
+  table, same shape as `lessons.js`/`paintings.js`.
+- **Dashboard Journal tab** — write/edit a post (title, optional
+  excerpt, body, optional cover photo via the same Cloudinary upload
+  as Paintings), Draft/Published status, a one-click "Publish" button
+  directly on any Draft row for fast review, delete. A post flagged
+  `Generated` shows an "AI draft" tag on its row and a reminder banner
+  on its edit form, so it's obvious at a glance which posts still need
+  a read-through before publishing.
 - **`shop.html`** — gallery with optional category filters, painting
   detail pages, basket (drawer + full page), checkout as an enquiry form,
   thank-you screen. Reads Airtable directly with the read-only token.
@@ -485,3 +519,17 @@ needed on your end.
   changes for her, sorting is purely a visitor-side view on top of
   data that already exists (hearts, created-time, price), no new
   Airtable field needed.
+- **The Journal shell is built; the weekly auto-writer isn't wired up
+  yet.** What's here now is everything a blog needs regardless of how
+  posts get written: the page, the Airtable table, the dashboard
+  review tab, and — the one non-negotiable part — **no post reaches
+  the public site without Rose flipping it to Published first**, enforced
+  by the read-only token's own query rather than trusted to the UI.
+  The actual weekly generator (a scheduled job that calls an LLM API
+  and drops a Draft into this same table) is a separate piece with its
+  own requirements — an API key that's genuinely Paul/Rose's own (cost
+  and ownership shouldn't sit with me), and a decision about what
+  grounds each post in something real (recently added paintings and
+  their Story notes, the season, a topic jotted down in advance) so it
+  doesn't read as generic filler. Building that next once the detailed
+  brief for it arrives.
