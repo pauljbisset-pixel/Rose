@@ -287,7 +287,7 @@
   <div class="wrap grid">
     <figure class="reveal">
       <img src="images/about.jpg" alt="Detail of a painting by Rose Budge">
-      <img class="portrait" src="images/rose.jpg" width="640" height="640" alt="Rose Budge">
+      <img class="portrait" id="aboutPortrait" src="images/rose.jpg" width="640" height="640" alt="Rose Budge">
     </figure>
     <div class="reveal">
       <p class="kicker">The Artist</p>
@@ -478,6 +478,7 @@ RoseAirtable.fetchSiteContent().then(sc => {
   if (sc.heroTagline) document.getElementById('heroTagline').textContent = sc.heroTagline;
   if (sc.aboutHeading) document.getElementById('aboutHeading').textContent = sc.aboutHeading;
   if (sc.aboutBody) document.getElementById('aboutBody').textContent = sc.aboutBody;
+  if (sc.portraitUrl) document.getElementById('aboutPortrait').src = RoseAirtable.thumbUrl(sc.portraitUrl);
 }).catch(err => {
   console.warn('Site content failed to load, using defaults:', err);
 }).finally(() => { _siteContentSettled = true; _restoreHashScroll(); });

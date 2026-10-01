@@ -1244,11 +1244,19 @@
   /* ---------------- Homepage (Site Content) tab ---------------- */
 
   function siteTabHtml() {
-    const sc = state.siteContent || { heroTagline: "", aboutHeading: "", aboutBody: "" };
+    const sc = state.siteContent || { heroTagline: "", aboutHeading: "", aboutBody: "", portraitUrl: "" };
     return `
       <div class="edit-card" style="max-width:640px">
         <p class="kicker">Homepage text</p>
         <p style="margin:0 0 20px;font-size:13px;color:var(--muted)">These replace the tagline at the top of the homepage and the "About" section underneath it. Changes show up next time someone loads the page — nothing needs code.</p>
+        <div class="upload-row">
+          <img class="upload-thumb" id="sPortraitThumb" src="${sc.portraitUrl ? esc(thumbFor(sc.portraitUrl)) : ""}" style="${sc.portraitUrl ? "border-radius:50%" : "visibility:hidden"}">
+          <div class="upload-drop">
+            <p style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-soft)">PORTRAIT</p>
+            <button type="button" id="sPortraitBtn">${sc.portraitUrl ? "Replace photo" : "Add a photo"}</button>
+            <p style="margin:0;font-size:12px;color:var(--muted)">Shows as the round photo on the About section</p>
+          </div>
+        </div>
         <label class="form-field" style="margin-bottom:14px">Hero tagline <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">the line under "Rose Budge" at the very top</span>
           <input type="text" id="sHeroTagline" value="${esc(sc.heroTagline)}">
         </label>
@@ -1268,19 +1276,24 @@
 
   function bindSiteTab() {
     document.getElementById("saveSiteBtn").addEventListener("click", saveSiteContent);
+    document.getElementById("sPortraitBtn").addEventListener("click", () => {
+      if (!state.siteContent) state.siteContent = { id: null, heroTagline: "", aboutHeading: "", aboutBody: "", portraitUrl: "" };
+      openUploadWidget((url) => { state.siteContent.portraitUrl = url; });
+    });
   }
 
   async function saveSiteContent() {
     const heroTagline = document.getElementById("sHeroTagline").value.trim();
     const aboutHeading = document.getElementById("sAboutHeading").value.trim();
     const aboutBody = document.getElementById("sAboutBody").value;
+    const portraitUrl = (state.siteContent && state.siteContent.portraitUrl) || "";
     state.errorMsg = "";
     const saveBtn = document.getElementById("saveSiteBtn");
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving…";
     try {
       const payload = Object.assign(
-        { heroTagline, aboutHeading, aboutBody },
+        { heroTagline, aboutHeading, aboutBody, portraitUrl },
         state.siteContent && state.siteContent.id ? { id: state.siteContent.id } : {}
       );
       const data = await authFetch("/.netlify/functions/site-content", {

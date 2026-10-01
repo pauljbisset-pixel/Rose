@@ -1,10 +1,11 @@
 /* ===========================================================
    /.netlify/functions/site-content
    Session-gated read/update for the homepage's editable text
-   (hero tagline, About heading + body). Unlike every other table
-   here, this one is a singleton — there's only ever one row, so
-   there's no POST-a-new-item/DELETE, just GET the row (or null if
-   it doesn't exist yet) and PATCH to create-or-update it.
+   (hero tagline, About heading + body) and Rose's About portrait
+   photo. Unlike every other table here, this one is a singleton —
+   there's only ever one row, so there's no POST-a-new-item/DELETE,
+   just GET the row (or null if it doesn't exist yet) and PATCH to
+   create-or-update it.
 =========================================================== */
 const { SITE_CONTENT_TABLE, airtableRequest, airtableListAll, requireSession, json, errorResponse } = require("./_lib");
 
@@ -14,7 +15,8 @@ function normalize(record) {
     id: record.id,
     heroTagline: f["Hero Tagline"] || "",
     aboutHeading: f["About Heading"] || "",
-    aboutBody: f["About Body"] || ""
+    aboutBody: f["About Body"] || "",
+    portraitUrl: f["Portrait URL"] || ""
   };
 }
 
@@ -23,6 +25,7 @@ function toFields(body) {
   if (body.heroTagline !== undefined) fields["Hero Tagline"] = body.heroTagline;
   if (body.aboutHeading !== undefined) fields["About Heading"] = body.aboutHeading;
   if (body.aboutBody !== undefined) fields["About Body"] = body.aboutBody;
+  if (body.portraitUrl !== undefined) fields["Portrait URL"] = body.portraitUrl;
   return fields;
 }
 

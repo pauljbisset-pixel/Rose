@@ -120,13 +120,15 @@ me editing the HTML every time she wants to change a sentence.
 | `Hero Tagline`  | Single line text | The line under "Rose Budge" at the very top of the page. |
 | `About Heading` | Single line text | The heading above the "About" paragraphs. |
 | `About Body`    | Long text | The About section's text. Plain text, blank line between paragraphs — same convention as the Blog's `Body` field. |
+| `Portrait URL`  | Single line text (or "URL" type) | The round photo of Rose on the About section — filled in by the dashboard's photo upload, same as every other photo on the site. Don't paste a link in by hand; use the dashboard. |
 
 You don't need to create this row by hand — saving once from the
 dashboard's Homepage tab creates it. Leaving a field blank there and
 saving does **not** blank out that part of the homepage: the site falls
-back to its own built-in default wording for any field that's empty or
-if this table can't be reached at all, so a typo or a dropped connection
-never leaves a section of the homepage looking empty.
+back to its own built-in default wording (and default portrait photo)
+for any field that's empty or if this table can't be reached at all, so
+a typo or a dropped connection never leaves a section of the homepage
+looking empty.
 
 ### Two API tokens (Account → Developer hub → Personal access tokens)
 
@@ -398,14 +400,16 @@ needed on your end.
   instead of an empty form. The hero tagline and the About section's
   heading/text are now editable too — see "Site Content" below.
 - **`netlify/functions/site-content.js`** — session-gated read/update
-  for the homepage's Hero Tagline / About Heading / About Body. A
-  deliberately small singleton — read-or-null, then
+  for the homepage's Hero Tagline / About Heading / About Body /
+  Portrait URL. A deliberately small singleton — read-or-null, then
   create-or-update — not a full CRUD set like the others, since there's
   only ever one row.
 - **Dashboard Homepage tab** — a single form (no row list, nothing to
-  reorder or delete) to edit the Hero Tagline, About Heading, and About
-  Body, with a blank field falling back to the homepage's own built-in
-  wording rather than showing nothing.
+  reorder or delete) to edit the Hero Tagline, About Heading, About
+  Body, and Rose's round About-section portrait photo (Cloudinary
+  upload, same as every other photo on the site), with a blank field
+  falling back to the homepage's own built-in wording/photo rather than
+  showing nothing.
 - **`netlify/functions/lessons.js`** — session-gated CRUD for the
   Lessons table, mirroring `paintings.js` exactly. The public homepage
   reads Lessons directly with the read-only Airtable token (like
@@ -630,3 +634,10 @@ needed on your end.
   section's width. Looks the same at the sizes it was designed for,
   and avoids needing to treat line breaks inside a plain-text Airtable
   field as meaningful HTML.
+- **The round About portrait is now a `Site Content` field too, same
+  upload flow as every other photo.** Added once Rose also asked about
+  changing her own photo — it reuses the same Cloudinary widget as
+  Paintings/Cards/Blog, so there's no separate "how do I resize a
+  circular photo" step: upload a normal rectangular photo and the site
+  crops and rounds it the same way it already does for every other
+  image.

@@ -156,7 +156,8 @@
       id: record.id,
       heroTagline: f["Hero Tagline"] || "",
       aboutHeading: f["About Heading"] || "",
-      aboutBody: f["About Body"] || ""
+      aboutBody: f["About Body"] || "",
+      portraitUrl: f["Portrait URL"] || ""
     };
   }
 
