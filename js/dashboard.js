@@ -28,6 +28,8 @@
     blogPostsLoaded: false,
     cards: [],
     cardsLoaded: false,
+    siteContent: null,
+    siteContentLoaded: false,
     tab: "works",
     draft: null,
     draftIsNew: false,
@@ -182,6 +184,12 @@
     state.cardsLoaded = true;
   }
 
+  async function loadSiteContent() {
+    const data = await authFetch("/.netlify/functions/site-content", { method: "GET" });
+    state.siteContent = data.record || { id: null, heroTagline: "", aboutHeading: "", aboutBody: "" };
+    state.siteContentLoaded = true;
+  }
+
   /* ---------------- auth screens ---------------- */
 
   function renderLoginGate(notice) {
@@ -317,7 +325,7 @@
           <p class="kicker">Studio</p>
           <h1>Rose's dashboard</h1>
         </div>
-        <button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : state.tab === "blog" ? "Write a post" : state.tab === "cards" ? "Add a card" : "Add a painting"}</button>
+        ${state.tab === "site" ? "" : `<button class="btn" id="newItemBtn">+ ${state.tab === "lessons" ? "Add a lesson" : state.tab === "blog" ? "Write a post" : state.tab === "cards" ? "Add a card" : "Add a painting"}</button>`}
       </div>
 
       ${state.recap ? recapBannerHtml(state.recap) : ""}
@@ -337,6 +345,7 @@
         <button class="tab-btn ${state.tab === "lessons" ? "on" : ""}" id="tabLessons">Lessons</button>
         <button class="tab-btn ${state.tab === "blog" ? "on" : ""}" id="tabBlog">Journal</button>
         <button class="tab-btn ${state.tab === "enquiries" ? "on" : ""}" id="tabEnquiries">Enquiries</button>
+        <button class="tab-btn ${state.tab === "site" ? "on" : ""}" id="tabSite">Homepage</button>
       </div>
 
       <div id="tabBody"></div>
@@ -345,7 +354,8 @@
     const dismissRecap = document.getElementById("dismissRecap");
     if (dismissRecap) dismissRecap.addEventListener("click", () => { state.recap = null; renderDashboard(); });
 
-    document.getElementById("newItemBtn").addEventListener("click", () => {
+    const newItemBtn = document.getElementById("newItemBtn");
+    if (newItemBtn) newItemBtn.addEventListener("click", () => {
       if (state.tab === "lessons") {
         state.lessonDraft = { id: null, date: "", price: 45, capacity: 6, booked: 0, status: "Open", location: "", notes: "" };
         state.lessonDraftIsNew = true;
@@ -407,6 +417,16 @@
         if (state.tab === "enquiries") renderTabBody();
       }
     });
+    document.getElementById("tabSite").addEventListener("click", async () => {
+      state.tab = "site";
+      renderDashboard();
+      if (!state.siteContentLoaded) {
+        const body = document.getElementById("tabBody");
+        body.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--muted)">Loading…</div>`;
+        try { await loadSiteContent(); } catch (err) { body.innerHTML = `<p class="form-error">${esc(err.message)}</p>`; return; }
+        if (state.tab === "site") renderTabBody();
+      }
+    });
 
     renderTabBody();
   }
@@ -426,6 +446,9 @@
     } else if (state.tab === "cards") {
       body.innerHTML = cardsTabHtml();
       bindCardsTab();
+    } else if (state.tab === "site") {
+      body.innerHTML = siteTabHtml();
+      bindSiteTab();
     } else {
       body.innerHTML = enquiriesTabHtml();
       bindEnquiriesTab();
@@ -1218,6 +1241,63 @@
     });
   }
 
+  /* ---------------- Homepage (Site Content) tab ---------------- */
+
+  function siteTabHtml() {
+    const sc = state.siteContent || { heroTagline: "", aboutHeading: "", aboutBody: "" };
+    return `
+      <div class="edit-card" style="max-width:640px">
+        <p class="kicker">Homepage text</p>
+        <p style="margin:0 0 20px;font-size:13px;color:var(--muted)">These replace the tagline at the top of the homepage and the "About" section underneath it. Changes show up next time someone loads the page — nothing needs code.</p>
+        <label class="form-field" style="margin-bottom:14px">Hero tagline <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">the line under "Rose Budge" at the very top</span>
+          <input type="text" id="sHeroTagline" value="${esc(sc.heroTagline)}">
+        </label>
+        <label class="form-field" style="margin-bottom:14px">About heading
+          <input type="text" id="sAboutHeading" value="${esc(sc.aboutHeading)}">
+        </label>
+        <label class="form-field" style="margin-bottom:14px">About text <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">leave a blank line between paragraphs</span>
+          <textarea id="sAboutBody" rows="8">${esc(sc.aboutBody)}</textarea>
+        </label>
+        <div class="edit-actions">
+          <button class="btn" id="saveSiteBtn" style="flex:1">Save</button>
+        </div>
+        <p class="form-msg" style="color:var(--muted)">${esc(state.savedNote)}</p>
+        ${state.errorMsg ? `<p class="form-error">${esc(state.errorMsg)}</p>` : ""}
+      </div>`;
+  }
+
+  function bindSiteTab() {
+    document.getElementById("saveSiteBtn").addEventListener("click", saveSiteContent);
+  }
+
+  async function saveSiteContent() {
+    const heroTagline = document.getElementById("sHeroTagline").value.trim();
+    const aboutHeading = document.getElementById("sAboutHeading").value.trim();
+    const aboutBody = document.getElementById("sAboutBody").value;
+    state.errorMsg = "";
+    const saveBtn = document.getElementById("saveSiteBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      const payload = Object.assign(
+        { heroTagline, aboutHeading, aboutBody },
+        state.siteContent && state.siteContent.id ? { id: state.siteContent.id } : {}
+      );
+      const data = await authFetch("/.netlify/functions/site-content", {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      });
+      state.siteContent = data.record;
+      state.savedNote = "Saved. The homepage will show this next time it loads.";
+      renderTabBody();
+    } catch (err) {
+      state.errorMsg = err.message;
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+      renderTabBody();
+    }
+  }
+
   /* ---------------- Enquiries tab ---------------- */
 
   function enquiriesTabHtml() {
@@ -1275,6 +1355,7 @@
     state.lessonsLoaded = false;
     state.blogPostsLoaded = false;
     state.cardsLoaded = false;
+    state.siteContentLoaded = false;
     state.errorMsg = "";
     renderApp();
   }
@@ -1291,6 +1372,8 @@
     state.blogPostsLoaded = false;
     state.cards = [];
     state.cardsLoaded = false;
+    state.siteContent = null;
+    state.siteContentLoaded = false;
     renderLoginGate();
   });
 

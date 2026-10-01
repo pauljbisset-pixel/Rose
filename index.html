@@ -135,6 +135,7 @@
     border:1px solid var(--sand);border-left:0;border-top:0;z-index:-1;
   }
   .about p{margin:0 0 1.25rem;color:var(--ink-soft);max-width:56ch}
+  .about-body{white-space:pre-line}
   .about p.first::first-letter{
     font-family:var(--display);font-size:3.4em;line-height:.82;float:left;
     padding:.06em .12em 0 0;color:var(--sea);font-weight:400;
@@ -276,7 +277,7 @@
   <div class="inner">
     <p class="eyebrow">Instow &nbsp;·&nbsp; North Devon</p>
     <h1>Rose Budge</h1>
-    <p class="lede">Oil, wax and seaweed gathered from the shore — paintings that carry the colour and energy of the Devon coast.</p>
+    <p class="lede" id="heroTagline">Oil, wax and seaweed gathered from the shore — paintings that carry the colour and energy of the Devon coast.</p>
   </div>
   <div class="scrollcue"><span class="line"></span> Scroll</div>
 </div>
@@ -290,11 +291,14 @@
     </figure>
     <div class="reveal">
       <p class="kicker">The Artist</p>
-      <h2>Coastal magic,<br>layer by layer</h2>
-      <p class="first">I am an artist based in Instow, where the Devon coastline's wild beauty inspires everything I create. My love for creativity started with cake design and textiles, but in the last six years painting has become my true passion.</p>
-      <p>I love collecting seaweed from the beach to work into my paintings — it adds a special texture and tells a story of the sea.</p>
-      <p>I work mainly with oils, mixing in wax to build up layers and create depth. Bright, vivid colours are my thing; I want my paintings to capture the energy and spirit of the coast.</p>
-      <p>I hope my paintings bring a bit of coastal magic into your world.</p>
+      <h2 id="aboutHeading">Coastal magic, layer by layer</h2>
+      <p class="about-body first" id="aboutBody">I am an artist based in Instow, where the Devon coastline's wild beauty inspires everything I create. My love for creativity started with cake design and textiles, but in the last six years painting has become my true passion.
+
+I love collecting seaweed from the beach to work into my paintings — it adds a special texture and tells a story of the sea.
+
+I work mainly with oils, mixing in wax to build up layers and create depth. Bright, vivid colours are my thing; I want my paintings to capture the energy and spirit of the coast.
+
+I hope my paintings bring a bit of coastal magic into your world.</p>
     </div>
   </div>
 </section>
@@ -457,12 +461,26 @@ const CFG = window.ROSE_CONFIG;
    the target ends up in the wrong spot. Once both loads have settled,
    re-jump to the original hash so the section lands correctly either way. */
 const _initialHash = window.location.hash;
-let _paintingsSettled = false, _lessonsSettled = false;
+let _paintingsSettled = false, _lessonsSettled = false, _siteContentSettled = false;
 function _restoreHashScroll() {
-  if (!_paintingsSettled || !_lessonsSettled || !_initialHash) return;
+  if (!_paintingsSettled || !_lessonsSettled || !_siteContentSettled || !_initialHash) return;
   const el = document.getElementById(_initialHash.slice(1));
   if (el) requestAnimationFrame(() => el.scrollIntoView({ block: "start" }));
 }
+
+// The hero tagline and About text are editable from the dashboard, but
+// default to the copy already written into this page's HTML above —
+// overwritten here only if Rose has actually saved something, and left
+// alone entirely if the fetch fails, so a flaky connection or a table
+// that doesn't exist yet never blanks out the homepage's own words.
+RoseAirtable.fetchSiteContent().then(sc => {
+  if (!sc) return;
+  if (sc.heroTagline) document.getElementById('heroTagline').textContent = sc.heroTagline;
+  if (sc.aboutHeading) document.getElementById('aboutHeading').textContent = sc.aboutHeading;
+  if (sc.aboutBody) document.getElementById('aboutBody').textContent = sc.aboutBody;
+}).catch(err => {
+  console.warn('Site content failed to load, using defaults:', err);
+}).finally(() => { _siteContentSettled = true; _restoreHashScroll(); });
 
 /* ===============================================================
    CONTACT DETAILS — the email address itself lives in js/config.js

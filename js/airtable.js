@@ -150,11 +150,30 @@
     return records.map(normalizeCard).sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
+  function normalizeSiteContent(record) {
+    const f = record.fields;
+    return {
+      id: record.id,
+      heroTagline: f["Hero Tagline"] || "",
+      aboutHeading: f["About Heading"] || "",
+      aboutBody: f["About Body"] || ""
+    };
+  }
+
+  // Returns null if the Site Content table is empty (or doesn't exist
+  // yet) — callers should fall back to whatever default copy is already
+  // in the page's HTML rather than showing nothing.
+  async function fetchSiteContent() {
+    const records = await fetchAllRecords(cfg.siteContentTable, {});
+    return records.length ? normalizeSiteContent(records[0]) : null;
+  }
+
   window.RoseAirtable = {
     fetchPaintings,
     fetchLessons,
     fetchBlogPosts,
     fetchCards,
+    fetchSiteContent,
     thumbUrl,
     fullUrl
   };

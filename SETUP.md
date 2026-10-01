@@ -109,6 +109,25 @@ Rose's hand-painted and printed notecards — a full catalog, browsable at
 You don't need to add rows by hand — the dashboard's Cards tab ("+ Add a
 card") creates these.
 
+### Table: `Site Content`
+
+A singleton table — **only ever one row** — holding the bits of homepage
+copy Rose edits herself from the dashboard's Homepage tab, rather than
+me editing the HTML every time she wants to change a sentence.
+
+| Field name | Type | Notes |
+|---|---|---|
+| `Hero Tagline`  | Single line text | The line under "Rose Budge" at the very top of the page. |
+| `About Heading` | Single line text | The heading above the "About" paragraphs. |
+| `About Body`    | Long text | The About section's text. Plain text, blank line between paragraphs — same convention as the Blog's `Body` field. |
+
+You don't need to create this row by hand — saving once from the
+dashboard's Homepage tab creates it. Leaving a field blank there and
+saving does **not** blank out that part of the homepage: the site falls
+back to its own built-in default wording for any field that's empty or
+if this table can't be reached at all, so a typo or a dropped connection
+never leaves a section of the homepage looking empty.
+
 ### Two API tokens (Account → Developer hub → Personal access tokens)
 
 Create **two separate tokens** — don't reuse one, since one of them ends up
@@ -123,7 +142,7 @@ in the browser and must not be able to write anything:
    - Access: only this one base
 
 Both tokens are scoped to the **whole base**, not individual tables, so
-adding new tables like `Lessons`, `Blog`, or `Cards` above doesn't need
+adding new tables like `Lessons`, `Blog`, `Cards`, or `Site Content` above doesn't need
 either token touching again — it's covered automatically. (If Airtable's
 token editor shows a list of specific tables rather than "all tables" for
 yours, just add the new table to that list on both tokens.)
@@ -376,7 +395,17 @@ needed on your end.
   checkout. Also a "Paint with Rose" **Lessons** section — upcoming Open
   sessions with spots-left shown, feeding a booking enquiry form for a
   chosen date; if nothing's currently open it shows a friendly note
-  instead of an empty form.
+  instead of an empty form. The hero tagline and the About section's
+  heading/text are now editable too — see "Site Content" below.
+- **`netlify/functions/site-content.js`** — session-gated read/update
+  for the homepage's Hero Tagline / About Heading / About Body. A
+  deliberately small singleton — read-or-null, then
+  create-or-update — not a full CRUD set like the others, since there's
+  only ever one row.
+- **Dashboard Homepage tab** — a single form (no row list, nothing to
+  reorder or delete) to edit the Hero Tagline, About Heading, and About
+  Body, with a blank field falling back to the homepage's own built-in
+  wording rather than showing nothing.
 - **`netlify/functions/lessons.js`** — session-gated CRUD for the
   Lessons table, mirroring `paintings.js` exactly. The public homepage
   reads Lessons directly with the read-only Airtable token (like
@@ -581,3 +610,23 @@ needed on your end.
   rather than disappearing — useful since a Printed design can be
   restocked and flipped straight back to Available, without Rose having
   to re-add it from scratch.
+- **Homepage hero tagline + About text are now editable, scoped to just
+  those two spots.** Rose asked specifically about the tagline and the
+  About section, so that's what moved into Airtable — the hero headline
+  ("Rose Budge"), eyebrow ("Instow · North Devon"), and the rest of the
+  page stayed as plain HTML. If she later wants more of the page
+  editable, the same `Site Content` table/pattern extends to it with a
+  new field each time, not a rebuild.
+- **A blank field falls back to the built-in default, it doesn't blank
+  the homepage.** Unlike every other table, this one's content sits
+  directly in a first-time visitor's hero/About section, so an empty
+  Airtable field (or the table not existing yet, or a dropped request)
+  has to fail safe. The default wording stays written directly in
+  `index.html` and is only overwritten client-side once a non-empty
+  value successfully loads from Airtable — never cleared.
+- **The About heading lost its forced two-line break.** It used to be
+  hardcoded as "Coastal magic,<br>layer by layer" with a manual line
+  break; now it's a single editable line that wraps naturally at the
+  section's width. Looks the same at the sizes it was designed for,
+  and avoids needing to treat line breaks inside a plain-text Airtable
+  field as meaningful HTML.
