@@ -157,7 +157,9 @@
       heroTagline: f["Hero Tagline"] || "",
       aboutHeading: f["About Heading"] || "",
       aboutBody: f["About Body"] || "",
-      portraitUrl: f["Portrait URL"] || ""
+      portraitUrl: f["Portrait URL"] || "",
+      heroPhotoUrl: f["Hero Photo URL"] || "",
+      aboutPhotoUrl: f["About Photo URL"] || ""
     };
   }
 

@@ -186,7 +186,7 @@
 
   async function loadSiteContent() {
     const data = await authFetch("/.netlify/functions/site-content", { method: "GET" });
-    state.siteContent = data.record || { id: null, heroTagline: "", aboutHeading: "", aboutBody: "" };
+    state.siteContent = data.record || Object.assign({}, SITE_CONTENT_DEFAULT);
     state.siteContentLoaded = true;
   }
 
@@ -1243,23 +1243,29 @@
 
   /* ---------------- Homepage (Site Content) tab ---------------- */
 
+  const SITE_CONTENT_DEFAULT = { id: null, heroTagline: "", aboutHeading: "", aboutBody: "", portraitUrl: "", heroPhotoUrl: "", aboutPhotoUrl: "" };
+
   function siteTabHtml() {
-    const sc = state.siteContent || { heroTagline: "", aboutHeading: "", aboutBody: "", portraitUrl: "" };
+    const sc = state.siteContent || SITE_CONTENT_DEFAULT;
+    const photoRow = (id, label, hint, url, round) => `
+      <div class="upload-row">
+        <img class="upload-thumb" id="${id}Thumb" src="${url ? esc(thumbFor(url)) : ""}" style="${url ? (round ? "border-radius:50%" : "") : "visibility:hidden"}">
+        <div class="upload-drop">
+          <p style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-soft)">${esc(label.toUpperCase())}</p>
+          <button type="button" id="${id}Btn">${url ? "Replace photo" : "Add a photo"}</button>
+          <p style="margin:0;font-size:12px;color:var(--muted)">${esc(hint)}</p>
+        </div>
+      </div>`;
     return `
       <div class="edit-card" style="max-width:640px">
-        <p class="kicker">Homepage text</p>
-        <p style="margin:0 0 20px;font-size:13px;color:var(--muted)">These replace the tagline at the top of the homepage and the "About" section underneath it. Changes show up next time someone loads the page — nothing needs code.</p>
-        <div class="upload-row">
-          <img class="upload-thumb" id="sPortraitThumb" src="${sc.portraitUrl ? esc(thumbFor(sc.portraitUrl)) : ""}" style="${sc.portraitUrl ? "border-radius:50%" : "visibility:hidden"}">
-          <div class="upload-drop">
-            <p style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-soft)">PORTRAIT</p>
-            <button type="button" id="sPortraitBtn">${sc.portraitUrl ? "Replace photo" : "Add a photo"}</button>
-            <p style="margin:0;font-size:12px;color:var(--muted)">Shows as the round photo on the About section</p>
-          </div>
-        </div>
-        <label class="form-field" style="margin-bottom:14px">Hero tagline <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">the line under "Rose Budge" at the very top</span>
+        <p class="kicker">Homepage text &amp; photos</p>
+        <p style="margin:0 0 20px;font-size:13px;color:var(--muted)">These replace the top-of-page photo and tagline, and the "About" section's photo and text. Changes show up next time someone loads the page — nothing needs code.</p>
+        ${photoRow("sHero", "Hero photo", "The large photo across the very top of the homepage", sc.heroPhotoUrl, false)}
+        <label class="form-field" style="margin-bottom:20px">Hero tagline <span style="text-transform:none;letter-spacing:0;font-size:13px;color:#9AA6AC">the line under "Rose Budge" at the very top</span>
           <input type="text" id="sHeroTagline" value="${esc(sc.heroTagline)}">
         </label>
+        ${photoRow("sAboutPhoto", "About photo", "The large photo next to the About text", sc.aboutPhotoUrl, false)}
+        ${photoRow("sPortrait", "Portrait", "The small round photo of Rose, overlapping the About photo", sc.portraitUrl, true)}
         <label class="form-field" style="margin-bottom:14px">About heading
           <input type="text" id="sAboutHeading" value="${esc(sc.aboutHeading)}">
         </label>
@@ -1276,24 +1282,32 @@
 
   function bindSiteTab() {
     document.getElementById("saveSiteBtn").addEventListener("click", saveSiteContent);
-    document.getElementById("sPortraitBtn").addEventListener("click", () => {
-      if (!state.siteContent) state.siteContent = { id: null, heroTagline: "", aboutHeading: "", aboutBody: "", portraitUrl: "" };
-      openUploadWidget((url) => { state.siteContent.portraitUrl = url; });
-    });
+    const photoUpload = (btnId, field) => {
+      document.getElementById(btnId).addEventListener("click", () => {
+        if (!state.siteContent) state.siteContent = Object.assign({}, SITE_CONTENT_DEFAULT);
+        openUploadWidget((url) => { state.siteContent[field] = url; });
+      });
+    };
+    photoUpload("sHeroBtn", "heroPhotoUrl");
+    photoUpload("sAboutPhotoBtn", "aboutPhotoUrl");
+    photoUpload("sPortraitBtn", "portraitUrl");
   }
 
   async function saveSiteContent() {
     const heroTagline = document.getElementById("sHeroTagline").value.trim();
     const aboutHeading = document.getElementById("sAboutHeading").value.trim();
     const aboutBody = document.getElementById("sAboutBody").value;
-    const portraitUrl = (state.siteContent && state.siteContent.portraitUrl) || "";
+    const sc = state.siteContent || SITE_CONTENT_DEFAULT;
+    const portraitUrl = sc.portraitUrl || "";
+    const heroPhotoUrl = sc.heroPhotoUrl || "";
+    const aboutPhotoUrl = sc.aboutPhotoUrl || "";
     state.errorMsg = "";
     const saveBtn = document.getElementById("saveSiteBtn");
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving…";
     try {
       const payload = Object.assign(
-        { heroTagline, aboutHeading, aboutBody, portraitUrl },
+        { heroTagline, aboutHeading, aboutBody, portraitUrl, heroPhotoUrl, aboutPhotoUrl },
         state.siteContent && state.siteContent.id ? { id: state.siteContent.id } : {}
       );
       const data = await authFetch("/.netlify/functions/site-content", {

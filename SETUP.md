@@ -117,18 +117,20 @@ me editing the HTML every time she wants to change a sentence.
 
 | Field name | Type | Notes |
 |---|---|---|
-| `Hero Tagline`  | Single line text | The line under "Rose Budge" at the very top of the page. |
-| `About Heading` | Single line text | The heading above the "About" paragraphs. |
-| `About Body`    | Long text | The About section's text. Plain text, blank line between paragraphs — same convention as the Blog's `Body` field. |
-| `Portrait URL`  | Single line text (or "URL" type) | The round photo of Rose on the About section — filled in by the dashboard's photo upload, same as every other photo on the site. Don't paste a link in by hand; use the dashboard. |
+| `Hero Tagline`     | Single line text | The line under "Rose Budge" at the very top of the page. |
+| `Hero Photo URL`   | Single line text (or "URL" type) | The large photo across the very top of the homepage — filled in by the dashboard's photo upload. Don't paste a link in by hand; use the dashboard. |
+| `About Heading`    | Single line text | The heading above the "About" paragraphs. |
+| `About Body`       | Long text | The About section's text. Plain text, blank line between paragraphs — same convention as the Blog's `Body` field. |
+| `About Photo URL`  | Single line text (or "URL" type) | The large photo next to the About text — filled in by the dashboard's photo upload. |
+| `Portrait URL`     | Single line text (or "URL" type) | The small round photo of Rose, overlapping the About photo — filled in by the dashboard's photo upload. |
 
 You don't need to create this row by hand — saving once from the
 dashboard's Homepage tab creates it. Leaving a field blank there and
 saving does **not** blank out that part of the homepage: the site falls
-back to its own built-in default wording (and default portrait photo)
-for any field that's empty or if this table can't be reached at all, so
-a typo or a dropped connection never leaves a section of the homepage
-looking empty.
+back to its own built-in default wording and photos for any field
+that's empty or if this table can't be reached at all, so a typo or a
+dropped connection never leaves a section of the homepage looking
+empty.
 
 ### Two API tokens (Account → Developer hub → Personal access tokens)
 
@@ -397,18 +399,20 @@ needed on your end.
   checkout. Also a "Paint with Rose" **Lessons** section — upcoming Open
   sessions with spots-left shown, feeding a booking enquiry form for a
   chosen date; if nothing's currently open it shows a friendly note
-  instead of an empty form. The hero tagline and the About section's
-  heading/text are now editable too — see "Site Content" below.
+  instead of an empty form. The hero photo/tagline and the About
+  section's photo/heading/text/portrait are now editable too — see
+  "Site Content" below.
 - **`netlify/functions/site-content.js`** — session-gated read/update
-  for the homepage's Hero Tagline / About Heading / About Body /
-  Portrait URL. A deliberately small singleton — read-or-null, then
-  create-or-update — not a full CRUD set like the others, since there's
-  only ever one row.
+  for the homepage's Hero Tagline / Hero Photo URL / About Heading /
+  About Body / About Photo URL / Portrait URL. A deliberately small
+  singleton — read-or-null, then create-or-update — not a full CRUD
+  set like the others, since there's only ever one row.
 - **Dashboard Homepage tab** — a single form (no row list, nothing to
   reorder or delete) to edit the Hero Tagline, About Heading, About
-  Body, and Rose's round About-section portrait photo (Cloudinary
-  upload, same as every other photo on the site), with a blank field
-  falling back to the homepage's own built-in wording/photo rather than
+  Body, and all three photos (hero photo, About photo, Rose's round
+  About portrait — Cloudinary upload, same as every other photo on the
+  site), with a blank field falling back to the homepage's own built-in
+  wording/photo rather than
   showing nothing.
 - **`netlify/functions/lessons.js`** — session-gated CRUD for the
   Lessons table, mirroring `paintings.js` exactly. The public homepage
@@ -614,13 +618,14 @@ needed on your end.
   rather than disappearing — useful since a Printed design can be
   restocked and flipped straight back to Available, without Rose having
   to re-add it from scratch.
-- **Homepage hero tagline + About text are now editable, scoped to just
-  those two spots.** Rose asked specifically about the tagline and the
-  About section, so that's what moved into Airtable — the hero headline
-  ("Rose Budge"), eyebrow ("Instow · North Devon"), and the rest of the
-  page stayed as plain HTML. If she later wants more of the page
-  editable, the same `Site Content` table/pattern extends to it with a
-  new field each time, not a rebuild.
+- **Homepage hero tagline + About text are editable, scoped to what was
+  actually asked for.** Rose asked specifically about the tagline and
+  the About section (text first, then photos), so that's what moved
+  into Airtable — the hero headline ("Rose Budge"), eyebrow ("Instow ·
+  North Devon"), and the rest of the page stayed as plain HTML. If she
+  later wants more of the page editable, the same `Site Content`
+  table/pattern extends to it with a new field each time, not a
+  rebuild.
 - **A blank field falls back to the built-in default, it doesn't blank
   the homepage.** Unlike every other table, this one's content sits
   directly in a first-time visitor's hero/About section, so an empty
@@ -641,3 +646,9 @@ needed on your end.
   circular photo" step: upload a normal rectangular photo and the site
   crops and rounds it the same way it already does for every other
   image.
+- **The hero photo and the large About photo are also editable now**,
+  same request extended to "the rest of the photos up there." Both are
+  plain rectangular Cloudinary uploads shown at full size/quality (no
+  square crop, unlike the round portrait) — the page's existing CSS
+  already handles cropping them to fit their spot, same as it always
+  did for the hardcoded `images/hero.jpg` and `images/about.jpg`.
